@@ -43,8 +43,9 @@ function LandingPage() {
       <main className="min-h-svh">
         <section className="mx-auto w-full max-w-2xl px-4 pt-16 pb-12 text-center">
           <h1 className="text-4xl font-bold tracking-tight text-balance sm:text-5xl">
-            Say it in a few words.
+            Marek Balvín
           </h1>
+          <h2 className="text-3xl font-bold sm:text-4xl">Say it in a few words.</h2>
           <p className="mx-auto mt-4 max-w-md text-lg text-pretty text-muted-foreground">
             Quacker is a tiny social network for short messages. Post a quack, read what everyone
             else is up to.
