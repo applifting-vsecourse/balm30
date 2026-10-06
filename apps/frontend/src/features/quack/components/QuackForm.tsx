@@ -31,8 +31,6 @@ import { useAddQuack } from "@/features/quack/hooks/useAddQuack"
 // the request is made — the server still validates independently.
 const MAX_LENGTH = 280
 
-// Radix Select can't use an empty string as an item value, so "no mood"
-// gets its own sentinel and is mapped to null on submit.
 const NO_MOOD = "none"
 
 const schema = z.object({

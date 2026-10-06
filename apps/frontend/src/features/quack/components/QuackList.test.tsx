@@ -39,6 +39,17 @@ describe("QuackList", () => {
     }
   })
 
+  it("says when no quack matches the search", () => {
+    render(
+      <QuackList
+        quacks={[]}
+        search="pond"
+      />,
+    )
+
+    expect(screen.getByText("No quacks match “pond”.")).toBeInTheDocument()
+  })
+
   it("shows an error with a working reload button", async () => {
     const onReload = vi.fn()
     render(
