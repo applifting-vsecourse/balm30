@@ -3,6 +3,7 @@
 import { Quack } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
+import { Logger } from '@nestjs/common';
 import { mock } from 'jest-mock-extended';
 import { QuacksService } from './quacks.service';
 
@@ -27,6 +28,60 @@ describe('QuacksService', () => {
 
     await expect(service.getQuacks()).resolves.toEqual(quacks);
     expect(repository.getQuacks).toHaveBeenCalledTimes(1);
+  });
+
+  it('searches with the trimmed term and a leading @ removed', async () => {
+    const quacks = [aQuack()];
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue(quacks);
+
+    const service = new QuacksService(repository);
+
+    await expect(service.getQuacks('  @CaffeinatedDuck ')).resolves.toEqual(
+      quacks,
+    );
+    expect(repository.getQuacks).toHaveBeenCalledWith('CaffeinatedDuck');
+  });
+
+  it.each(['', '   ', '@'])(
+    'returns the full feed for the blank search %j',
+    async (search) => {
+      const repository = mock<QuackRepository>();
+      repository.getQuacks.mockResolvedValue([]);
+
+      const service = new QuacksService(repository);
+      await service.getQuacks(search);
+
+      expect(repository.getQuacks).toHaveBeenCalledWith();
+    },
+  );
+
+  it('logs the search term and the number of results', async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([aQuack(), aQuack({ id: 'q2' })]);
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    const service = new QuacksService(repository);
+    await service.getQuacks('pond');
+
+    expect(log).toHaveBeenCalledWith('Quack search q="pond" results=2');
+    log.mockRestore();
+  });
+
+  it('does not log when there is no search', async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => undefined);
+
+    const service = new QuacksService(repository);
+    await service.getQuacks('  ');
+
+    expect(log).not.toHaveBeenCalled();
+    log.mockRestore();
   });
 
   it('creates a quack owned by the signed-in user', async () => {
