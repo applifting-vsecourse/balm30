@@ -59,6 +59,9 @@ export class QuackRepository {
               {
                 user: { username: { contains: search, mode: 'insensitive' } },
               },
+              {
+                poll: { question: { contains: search, mode: 'insensitive' } },
+              },
             ],
           }
         : undefined,
