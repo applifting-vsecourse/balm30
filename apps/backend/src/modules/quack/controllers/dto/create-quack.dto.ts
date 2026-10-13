@@ -1,23 +1,29 @@
-import { Mood, MOODS } from '@/modules/quack/domain/quack';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import {
+  Mood,
+  MOODS,
+  QUACK_TEXT_MAX_LENGTH,
+} from '@/modules/quack/domain/quack';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import {
   IsIn,
-  IsNotEmpty,
   IsOptional,
   IsString,
   MaxLength,
+  ValidateNested,
 } from 'class-validator';
+import { CreatePollDto } from './create-poll.dto';
 
 export class CreateQuackDto {
-  @ApiProperty({
-    description: 'Body of the quack',
+  @ApiPropertyOptional({
+    description: 'Body of the quack; required unless the quack has a poll',
     example: 'Hello, world!',
-    maxLength: 280,
+    maxLength: QUACK_TEXT_MAX_LENGTH,
   })
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
-  @MaxLength(280)
-  text!: string;
+  @MaxLength(QUACK_TEXT_MAX_LENGTH)
+  text?: string;
 
   @ApiPropertyOptional({
     description: 'Mood of the quack; omit or send null for no mood',
@@ -28,4 +34,14 @@ export class CreateQuackDto {
   @IsOptional()
   @IsIn(MOODS)
   mood?: Mood | null;
+
+  @ApiPropertyOptional({
+    description: 'Poll attached to the quack; omit or send null for none',
+    type: CreatePollDto,
+    nullable: true,
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreatePollDto)
+  poll?: CreatePollDto | null;
 }

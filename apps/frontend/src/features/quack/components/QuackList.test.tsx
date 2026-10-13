@@ -13,6 +13,7 @@ const quack = (overrides: Partial<Quack> = {}): Quack => ({
   userId: "u1",
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
+  poll: null,
   ...overrides,
 })
 
@@ -37,6 +38,31 @@ describe("QuackList", () => {
     for (const label of ["Happy", "Sad", "Angry", "Silly"]) {
       expect(screen.queryByText(label)).not.toBeInTheDocument()
     }
+  })
+
+  it("shows a poll's question and answers in order", () => {
+    render(
+      <QuackList
+        quacks={[
+          quack({
+            text: "",
+            poll: {
+              id: "p1",
+              question: "Where do we go for lunch?",
+              closedAt: null,
+              options: [
+                { id: "o1", text: "Pizza" },
+                { id: "o2", text: "Soup" },
+              ],
+            },
+          }),
+        ]}
+      />,
+    )
+
+    expect(screen.getByText("Where do we go for lunch?")).toBeInTheDocument()
+    const answers = screen.getAllByRole("listitem").map((item) => item.textContent)
+    expect(answers).toEqual(["Pizza", "Soup"])
   })
 
   it("says when no quack matches the search", () => {
