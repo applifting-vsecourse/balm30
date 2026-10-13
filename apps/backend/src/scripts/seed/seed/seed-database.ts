@@ -2,6 +2,7 @@ import { PrismaService } from '@/core/prisma/prisma.service';
 import { User } from '@/generated/prisma/client';
 import { BetterAuth } from '@/shared/auth/providers/better-auth.provider';
 import { Config } from '@/shared/config/config.service';
+import { createPoll } from './create-poll';
 import { createQuack } from './create-quack';
 import { createUser } from './create-user';
 
@@ -171,4 +172,20 @@ Please stop tagging me.`,
       createdAt: new Date(now - minutesAgo * MINUTE_IN_MS),
     });
   }
+
+  console.log('Creating example poll');
+
+  await createPoll(prisma, {
+    text: 'Planning the pond picnic. Herons are not invited.',
+    userId: pondAdmin.id,
+    createdAt: new Date(now - 45 * MINUTE_IN_MS),
+    question: "Where should we hold Saturday's picnic?",
+    options: ['North end (reeds permitting)', 'West bank', 'The usual bench'],
+    votes: [
+      { voter: caffeinatedDuck, optionIndex: 1 },
+      { voter: migrationSeason, optionIndex: 1 },
+      { voter: breadCritic, optionIndex: 2 },
+      { voter: deepDuckThoughts, optionIndex: 0 },
+    ],
+  });
 };
