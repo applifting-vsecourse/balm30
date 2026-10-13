@@ -44,9 +44,10 @@ export class QuacksController {
   @ApiResponse({ status: 400, description: 'Invalid search' })
   @ApiResponse({ status: 401, description: 'Not signed in' })
   async list(
+    @User() user: Identity,
     @Query() query: SearchQuacksQueryDto,
   ): Promise<QuackResponseDto[]> {
-    const quacks = await this.quacksService.getQuacks(query.q);
+    const quacks = await this.quacksService.getQuacks(user, query.q);
     return quacks.map(QuackResponseDto.fromDomain);
   }
 
@@ -54,6 +55,7 @@ export class QuacksController {
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create a quack' })
   @ApiResponse({ status: 201, type: QuackResponseDto })
+  @ApiResponse({ status: 400, description: 'Invalid quack or poll' })
   @ApiResponse({ status: 401, description: 'Not signed in' })
   async create(
     @User() user: Identity,
@@ -62,6 +64,7 @@ export class QuacksController {
     const quack = await this.quacksService.createQuack(user, {
       text: body.text,
       mood: body.mood,
+      poll: body.poll,
     });
     return QuackResponseDto.fromDomain(quack);
   }

@@ -1,3 +1,7 @@
+import { Poll } from '@/modules/quack/domain/poll';
+
+export const QUACK_TEXT_MAX_LENGTH = 280;
+
 export const MOODS = ['happy', 'sad', 'angry', 'silly'] as const;
 
 export type Mood = (typeof MOODS)[number];
@@ -16,4 +20,5 @@ export type Quack = {
   createdAt: Date;
   updatedAt: Date;
   user?: QuackAuthor;
+  poll: Poll | null;
 };

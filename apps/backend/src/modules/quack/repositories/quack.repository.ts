@@ -3,11 +3,27 @@ import {
   Quack as PrismaQuack,
   User as PrismaUser,
 } from '@/generated/prisma/client';
+import { NewPoll } from '@/modules/quack/domain/poll';
 import { Mood, Quack } from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
+import {
+  mapPrismaPollToDomain,
+  pollIncludeFor,
+  PrismaPollWithViewer,
+} from './prisma-poll';
+
+const includeQuackRelationsFor = (viewerId: string) =>
+  ({
+    user: true,
+    poll: { include: pollIncludeFor(viewerId) },
+  }) as const;
 
 const mapPrismaQuackToDomain = (
-  quack: PrismaQuack & { user?: PrismaUser },
+  quack: PrismaQuack & {
+    user?: PrismaUser;
+    poll?: PrismaPollWithViewer | null;
+  },
+  viewerId: string,
 ): Quack => ({
   id: quack.id,
   text: quack.text,
@@ -22,6 +38,7 @@ const mapPrismaQuackToDomain = (
         username: quack.user.displayUsername ?? quack.user.username ?? '',
       }
     : undefined,
+  poll: quack.poll ? mapPrismaPollToDomain(quack.poll, viewerId) : null,
 });
 
 /**
@@ -32,7 +49,7 @@ const mapPrismaQuackToDomain = (
 export class QuackRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getQuacks(search?: string): Promise<Quack[]> {
+  async getQuacks(viewerId: string, search?: string): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
       where: search
         ? {
@@ -42,28 +59,46 @@ export class QuackRepository {
               {
                 user: { username: { contains: search, mode: 'insensitive' } },
               },
+              {
+                poll: { question: { contains: search, mode: 'insensitive' } },
+              },
             ],
           }
         : undefined,
-      include: { user: true },
+      include: includeQuackRelationsFor(viewerId),
       orderBy: { createdAt: 'desc' },
     });
-    return quacks.map(mapPrismaQuackToDomain);
+    return quacks.map((quack) => mapPrismaQuackToDomain(quack, viewerId));
   }
 
   async createQuack(createQuackData: {
     text: string;
     mood: Mood | null;
     userId: string;
+    poll: NewPoll | null;
   }): Promise<Quack> {
+    const { poll } = createQuackData;
     const quack = await this.prisma.quack.create({
       data: {
         text: createQuackData.text,
         mood: createQuackData.mood,
         user: { connect: { id: createQuackData.userId } },
+        poll: poll
+          ? {
+              create: {
+                question: poll.question,
+                options: {
+                  create: poll.options.map((text, position) => ({
+                    text,
+                    position,
+                  })),
+                },
+              },
+            }
+          : undefined,
       },
-      include: { user: true },
+      include: includeQuackRelationsFor(createQuackData.userId),
     });
-    return mapPrismaQuackToDomain(quack);
+    return mapPrismaQuackToDomain(quack, createQuackData.userId);
   }
 }
