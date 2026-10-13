@@ -18,6 +18,7 @@ export const POLL_MAX_OPTIONS = 4
 export const pollOptionSchema = z.object({
   id: z.string(),
   text: z.string(),
+  votes: z.number().int().nonnegative(),
 })
 
 export const pollSchema = z.object({
@@ -25,6 +26,8 @@ export const pollSchema = z.object({
   question: z.string(),
   closedAt: z.coerce.date().nullable(),
   options: z.array(pollOptionSchema),
+  totalVotes: z.number().int().nonnegative(),
+  myOptionId: z.string().nullable(),
 })
 
 export const quackSchema = z.object({

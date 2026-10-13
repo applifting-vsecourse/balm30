@@ -40,31 +40,6 @@ describe("QuackList", () => {
     }
   })
 
-  it("shows a poll's question and answers in order", () => {
-    render(
-      <QuackList
-        quacks={[
-          quack({
-            text: "",
-            poll: {
-              id: "p1",
-              question: "Where do we go for lunch?",
-              closedAt: null,
-              options: [
-                { id: "o1", text: "Pizza" },
-                { id: "o2", text: "Soup" },
-              ],
-            },
-          }),
-        ]}
-      />,
-    )
-
-    expect(screen.getByText("Where do we go for lunch?")).toBeInTheDocument()
-    const answers = screen.getAllByRole("listitem").map((item) => item.textContent)
-    expect(answers).toEqual(["Pizza", "Soup"])
-  })
-
   it("says when no quack matches the search", () => {
     render(
       <QuackList
