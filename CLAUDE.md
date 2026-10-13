@@ -30,6 +30,8 @@ The CLI puts `shadow-xs`/`shadow-sm` on inputs, textareas and cards. [`DESIGN.md
 
 Assume the dev servers are up. If something is listening on the app's ports, that is this application: use it. Don't start a second instance, don't restart it, don't run `pnpm dev`.
 
+The backend's watcher doesn't always restart after a change, so a running server is not proof that it runs your code. Before relying on it, compare `http://localhost:4050/api/docs-json` with what you changed: new endpoints in `paths`, new fields in `components.schemas`. If it doesn't match, tell the user it needs a restart and carry on with tests as the evidence. Don't restart it yourself.
+
 Don't reach for the browser to check your own work. Tests and type-checks are the evidence; open the running app when asked to, not on your own initiative.
 
 ### No comments that explain reasoning
