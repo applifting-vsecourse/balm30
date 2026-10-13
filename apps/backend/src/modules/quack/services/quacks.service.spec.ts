@@ -20,6 +20,8 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   ...overrides,
 });
 
+const viewer = { id: 'u1' } as Identity;
+
 describe('QuacksService', () => {
   it('returns quacks from the repository', async () => {
     const quacks = [aQuack()];
@@ -28,8 +30,9 @@ describe('QuacksService', () => {
 
     const service = new QuacksService(repository);
 
-    await expect(service.getQuacks()).resolves.toEqual(quacks);
+    await expect(service.getQuacks(viewer)).resolves.toEqual(quacks);
     expect(repository.getQuacks).toHaveBeenCalledTimes(1);
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1');
   });
 
   it('searches with the trimmed term and a leading @ removed', async () => {
@@ -39,10 +42,10 @@ describe('QuacksService', () => {
 
     const service = new QuacksService(repository);
 
-    await expect(service.getQuacks('  @CaffeinatedDuck ')).resolves.toEqual(
-      quacks,
-    );
-    expect(repository.getQuacks).toHaveBeenCalledWith('CaffeinatedDuck');
+    await expect(
+      service.getQuacks(viewer, '  @CaffeinatedDuck '),
+    ).resolves.toEqual(quacks);
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', 'CaffeinatedDuck');
   });
 
   it.each(['', '   ', '@'])(
@@ -52,9 +55,9 @@ describe('QuacksService', () => {
       repository.getQuacks.mockResolvedValue([]);
 
       const service = new QuacksService(repository);
-      await service.getQuacks(search);
+      await service.getQuacks(viewer, search);
 
-      expect(repository.getQuacks).toHaveBeenCalledWith();
+      expect(repository.getQuacks).toHaveBeenCalledWith('u1');
     },
   );
 
@@ -66,7 +69,7 @@ describe('QuacksService', () => {
       .mockImplementation(() => undefined);
 
     const service = new QuacksService(repository);
-    await service.getQuacks('pond');
+    await service.getQuacks(viewer, 'pond');
 
     expect(log).toHaveBeenCalledWith('Quack search q="pond" results=2');
     log.mockRestore();
@@ -80,7 +83,7 @@ describe('QuacksService', () => {
       .mockImplementation(() => undefined);
 
     const service = new QuacksService(repository);
-    await service.getQuacks('  ');
+    await service.getQuacks(viewer, '  ');
 
     expect(log).not.toHaveBeenCalled();
     log.mockRestore();
@@ -135,9 +138,11 @@ describe('QuacksService', () => {
       question: newPoll.question,
       closedAt: null,
       options: [
-        { id: 'o1', text: 'North end' },
-        { id: 'o2', text: 'West bank' },
+        { id: 'o1', text: 'North end', votes: 0 },
+        { id: 'o2', text: 'West bank', votes: 0 },
       ],
+      totalVotes: 0,
+      myOptionId: null,
     });
 
     it('passes the poll through to the repository', async () => {

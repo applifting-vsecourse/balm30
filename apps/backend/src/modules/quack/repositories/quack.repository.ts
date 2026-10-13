@@ -1,35 +1,27 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import {
-  Poll as PrismaPoll,
-  PollOption as PrismaPollOption,
   Quack as PrismaQuack,
   User as PrismaUser,
 } from '@/generated/prisma/client';
-import { NewPoll, Poll } from '@/modules/quack/domain/poll';
+import { NewPoll } from '@/modules/quack/domain/poll';
 import { Mood, Quack } from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
+import {
+  mapPrismaPollToDomain,
+  pollIncludeFor,
+  PrismaPollWithViewer,
+} from './prisma-poll';
 
-const includeQuackRelations = {
-  user: true,
-  poll: { include: { options: { orderBy: { position: 'asc' } } } },
-} as const;
-
-const mapPrismaPollToDomain = (
-  poll: PrismaPoll & { options: PrismaPollOption[] },
-): Poll => ({
-  id: poll.id,
-  question: poll.question,
-  closedAt: poll.closedAt,
-  options: poll.options.map((option) => ({
-    id: option.id,
-    text: option.text,
-  })),
-});
+const includeQuackRelationsFor = (viewerId: string) =>
+  ({
+    user: true,
+    poll: { include: pollIncludeFor(viewerId) },
+  }) as const;
 
 const mapPrismaQuackToDomain = (
   quack: PrismaQuack & {
     user?: PrismaUser;
-    poll?: (PrismaPoll & { options: PrismaPollOption[] }) | null;
+    poll?: PrismaPollWithViewer | null;
   },
 ): Quack => ({
   id: quack.id,
@@ -56,7 +48,7 @@ const mapPrismaQuackToDomain = (
 export class QuackRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getQuacks(search?: string): Promise<Quack[]> {
+  async getQuacks(viewerId: string, search?: string): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
       where: search
         ? {
@@ -69,7 +61,7 @@ export class QuackRepository {
             ],
           }
         : undefined,
-      include: includeQuackRelations,
+      include: includeQuackRelationsFor(viewerId),
       orderBy: { createdAt: 'desc' },
     });
     return quacks.map(mapPrismaQuackToDomain);
@@ -101,7 +93,7 @@ export class QuackRepository {
             }
           : undefined,
       },
-      include: includeQuackRelations,
+      include: includeQuackRelationsFor(createQuackData.userId),
     });
     return mapPrismaQuackToDomain(quack);
   }

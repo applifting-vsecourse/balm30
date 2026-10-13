@@ -16,13 +16,13 @@ export class QuacksService {
 
   constructor(private readonly quackRepository: QuackRepository) {}
 
-  async getQuacks(search?: string): Promise<Quack[]> {
+  async getQuacks(viewer: Identity, search?: string): Promise<Quack[]> {
     const term = normalizeSearch(search);
     if (!term) {
-      return this.quackRepository.getQuacks();
+      return this.quackRepository.getQuacks(viewer.id);
     }
 
-    const quacks = await this.quackRepository.getQuacks(term);
+    const quacks = await this.quackRepository.getQuacks(viewer.id, term);
     this.logger.log(
       `Quack search q=${JSON.stringify(term)} results=${quacks.length}`,
     );

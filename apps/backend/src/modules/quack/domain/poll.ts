@@ -6,6 +6,7 @@ export const POLL_MAX_OPTIONS = 4;
 export type PollOption = {
   id: string;
   text: string;
+  votes: number;
 };
 
 export type Poll = {
@@ -13,9 +14,31 @@ export type Poll = {
   question: string;
   closedAt: Date | null;
   options: PollOption[];
+  totalVotes: number;
+  myOptionId: string | null;
 };
 
 export type NewPoll = {
   question: string;
   options: string[];
 };
+
+export type VoteChange = 'cast' | 'moved' | 'removed' | 'unchanged';
+
+export class PollNotFoundError extends Error {
+  constructor(pollId: string) {
+    super(`Poll ${pollId} does not exist`);
+  }
+}
+
+export class PollClosedError extends Error {
+  constructor(pollId: string) {
+    super(`Poll ${pollId} is closed`);
+  }
+}
+
+export class PollOptionNotFoundError extends Error {
+  constructor(pollId: string, optionId: string) {
+    super(`Option ${optionId} is not part of poll ${pollId}`);
+  }
+}

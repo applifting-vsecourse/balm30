@@ -44,9 +44,10 @@ export class QuacksController {
   @ApiResponse({ status: 400, description: 'Invalid search' })
   @ApiResponse({ status: 401, description: 'Not signed in' })
   async list(
+    @User() user: Identity,
     @Query() query: SearchQuacksQueryDto,
   ): Promise<QuackResponseDto[]> {
-    const quacks = await this.quacksService.getQuacks(query.q);
+    const quacks = await this.quacksService.getQuacks(user, query.q);
     return quacks.map(QuackResponseDto.fromDomain);
   }
 
