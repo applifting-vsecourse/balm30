@@ -19,7 +19,7 @@ const mapPrismaQuackToDomain = (
     ? {
         id: quack.user.id,
         name: quack.user.name,
-        username: quack.user.username ?? '',
+        username: quack.user.displayUsername ?? quack.user.username ?? '',
       }
     : undefined,
 });

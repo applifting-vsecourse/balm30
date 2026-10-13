@@ -4,6 +4,11 @@ import { env } from "@/config/env"
 import { queryClient } from "@/config/react-query"
 import { authKeys } from "@/lib/auth-keys"
 
+type ErrorBody = { message?: string | string[] }
+
+const isErrorBody = (data: unknown): data is ErrorBody =>
+  typeof data === "object" && data !== null && "message" in data
+
 // Single shared HTTP client. Per the Applifting frontend playbook:
 // - send credentials so better-auth's session cookie travels with every request
 // - on 401 invalidate the auth session query so route loaders re-resolve auth
@@ -21,15 +26,11 @@ export const api = ky.create({
     // Without this the user would see ky's generic "Request failed with status
     // code 400" and never learn what was actually wrong.
     beforeError: [
-      async ({ error }) => {
-        if (!(error instanceof HTTPError)) return error
-        try {
-          const body = (await error.response.clone().json()) as { message?: string | string[] }
-          const message = Array.isArray(body.message) ? body.message.join(", ") : body.message
-          if (message) error.message = message
-        } catch {
-          // response had no JSON body — keep ky's default message
-        }
+      ({ error }) => {
+        if (!(error instanceof HTTPError) || !isErrorBody(error.data)) return error
+        const { message } = error.data
+        const text = Array.isArray(message) ? message.join(", ") : message
+        if (text) error.message = text
         return error
       },
     ],
