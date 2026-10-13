@@ -8,13 +8,17 @@ export const pollIncludeFor = (viewerId: string) =>
       include: { _count: { select: { votes: true } } },
     },
     votes: { where: { userId: viewerId }, select: { optionId: true } },
+    quack: { select: { userId: true } },
   }) as const;
 
 export type PrismaPollWithViewer = Prisma.PollGetPayload<{
   include: ReturnType<typeof pollIncludeFor>;
 }>;
 
-export const mapPrismaPollToDomain = (poll: PrismaPollWithViewer): Poll => {
+export const mapPrismaPollToDomain = (
+  poll: PrismaPollWithViewer,
+  viewerId: string,
+): Poll => {
   const options = poll.options.map((option) => ({
     id: option.id,
     text: option.text,
@@ -27,5 +31,6 @@ export const mapPrismaPollToDomain = (poll: PrismaPollWithViewer): Poll => {
     options,
     totalVotes: options.reduce((total, option) => total + option.votes, 0),
     myOptionId: poll.votes[0]?.optionId ?? null,
+    canClose: poll.closedAt === null && poll.quack.userId === viewerId,
   };
 };

@@ -36,6 +36,11 @@ export class PollResponseDto {
   })
   myOptionId!: string | null;
 
+  @ApiProperty({
+    description: 'Whether the signed-in user can close this poll',
+  })
+  canClose!: boolean;
+
   static fromDomain(poll: Poll): PollResponseDto {
     return {
       id: poll.id,
@@ -48,6 +53,7 @@ export class PollResponseDto {
       })),
       totalVotes: poll.totalVotes,
       myOptionId: poll.myOptionId,
+      canClose: poll.canClose,
     };
   }
 }

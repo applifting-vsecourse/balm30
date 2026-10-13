@@ -1,21 +1,10 @@
-import { useMutation, useQueryClient, type QueryClient } from "@tanstack/react-query"
+import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { castVote, removeVote } from "@/features/quack/api/pollVote"
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import type { Poll, Quack } from "@/features/quack/api/quackSchemas"
+import type { Quack } from "@/features/quack/api/quackSchemas"
+import { pollMutationScope, updatePollInLists } from "@/features/quack/lib/pollMutations"
 import { withVote } from "@/features/quack/lib/withVote"
-
-const updatePollInLists = (
-  queryClient: QueryClient,
-  pollId: string,
-  update: (poll: Poll) => Poll,
-) => {
-  queryClient.setQueriesData<Quack[]>({ queryKey: quackKeys.lists() }, (quacks) =>
-    quacks?.map((quack) =>
-      quack.poll?.id === pollId ? { ...quack, poll: update(quack.poll) } : quack,
-    ),
-  )
-}
 
 export function useVote(pollId: string) {
   const queryClient = useQueryClient()
@@ -24,7 +13,7 @@ export function useVote(pollId: string) {
 
   return useMutation({
     mutationKey,
-    scope: { id: mutationKey.join("/") },
+    scope: pollMutationScope(pollId),
     mutationFn: (optionId: string | null) =>
       optionId ? castVote(pollId, optionId) : removeVote(pollId),
     onMutate: async (optionId) => {

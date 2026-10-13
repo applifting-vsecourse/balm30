@@ -16,6 +16,7 @@ export type Poll = {
   options: PollOption[];
   totalVotes: number;
   myOptionId: string | null;
+  canClose: boolean;
 };
 
 export type NewPoll = {
@@ -34,6 +35,12 @@ export class PollNotFoundError extends Error {
 export class PollClosedError extends Error {
   constructor(pollId: string) {
     super(`Poll ${pollId} is closed`);
+  }
+}
+
+export class PollNotAuthorError extends Error {
+  constructor(pollId: string) {
+    super(`Only the author can close poll ${pollId}`);
   }
 }
 

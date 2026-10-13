@@ -3,6 +3,7 @@ import { Prisma } from '@/generated/prisma/client';
 import {
   Poll,
   PollClosedError,
+  PollNotAuthorError,
   PollNotFoundError,
   PollOptionNotFoundError,
   VoteChange,
@@ -10,16 +11,29 @@ import {
 import { Injectable } from '@nestjs/common';
 import { mapPrismaPollToDomain, pollIncludeFor } from './prisma-poll';
 
-const lockOpenPoll = async (
+type LockedPoll = { closedAt: Date | null; authorId: string };
+
+const lockPoll = async (
   tx: Prisma.TransactionClient,
   pollId: string,
-): Promise<void> => {
-  const [poll] = await tx.$queryRaw<{ closedAt: Date | null }[]>`
-    SELECT "closedAt" FROM "poll" WHERE "id" = ${pollId} FOR UPDATE
+): Promise<LockedPoll> => {
+  const [poll] = await tx.$queryRaw<LockedPoll[]>`
+    SELECT "poll"."closedAt", "quack"."userId" AS "authorId"
+    FROM "poll" JOIN "quack" ON "quack"."id" = "poll"."quackId"
+    WHERE "poll"."id" = ${pollId}
+    FOR UPDATE OF "poll"
   `;
   if (!poll) {
     throw new PollNotFoundError(pollId);
   }
+  return poll;
+};
+
+const lockOpenPoll = async (
+  tx: Prisma.TransactionClient,
+  pollId: string,
+): Promise<void> => {
+  const poll = await lockPoll(tx, pollId);
   if (poll.closedAt) {
     throw new PollClosedError(pollId);
   }
@@ -37,7 +51,7 @@ export class PollRepository {
     if (!poll) {
       throw new PollNotFoundError(pollId);
     }
-    return mapPrismaPollToDomain(poll);
+    return mapPrismaPollToDomain(poll, viewerId);
   }
 
   async setVote(
@@ -67,6 +81,21 @@ export class PollRepository {
       }
       await tx.pollVote.update({ where, data: { optionId } });
       return 'moved';
+    });
+  }
+
+  async closePoll(pollId: string, userId: string): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      const poll = await lockPoll(tx, pollId);
+      if (poll.authorId !== userId) {
+        throw new PollNotAuthorError(pollId);
+      }
+      if (!poll.closedAt) {
+        await tx.poll.update({
+          where: { id: pollId },
+          data: { closedAt: new Date() },
+        });
+      }
     });
   }
 

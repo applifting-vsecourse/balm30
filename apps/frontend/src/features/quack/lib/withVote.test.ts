@@ -13,6 +13,7 @@ const poll = (myOptionId: string | null, votes: [number, number]): Poll => ({
   ],
   totalVotes: votes[0] + votes[1],
   myOptionId,
+  canClose: false,
 })
 
 describe("withVote", () => {

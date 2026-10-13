@@ -143,6 +143,7 @@ describe('QuacksService', () => {
       ],
       totalVotes: 0,
       myOptionId: null,
+      canClose: true,
     });
 
     it('passes the poll through to the repository', async () => {

@@ -28,6 +28,7 @@ export const pollSchema = z.object({
   options: z.array(pollOptionSchema),
   totalVotes: z.number().int().nonnegative(),
   myOptionId: z.string().nullable(),
+  canClose: z.boolean(),
 })
 
 export const quackSchema = z.object({

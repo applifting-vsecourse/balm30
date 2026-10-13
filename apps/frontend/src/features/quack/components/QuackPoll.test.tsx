@@ -3,12 +3,14 @@ import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { closePoll } from "@/features/quack/api/closePoll"
 import { castVote, removeVote } from "@/features/quack/api/pollVote"
 import { quackKeys } from "@/features/quack/api/quackKeys"
 import type { Poll, Quack } from "@/features/quack/api/quackSchemas"
 import { QuackList } from "@/features/quack/components/QuackList"
 
 vi.mock("@/features/quack/api/pollVote", () => ({ castVote: vi.fn(), removeVote: vi.fn() }))
+vi.mock("@/features/quack/api/closePoll", () => ({ closePoll: vi.fn() }))
 
 const poll = (overrides: Partial<Poll> = {}): Poll => ({
   id: "p1",
@@ -20,6 +22,7 @@ const poll = (overrides: Partial<Poll> = {}): Poll => ({
   ],
   totalVotes: 3,
   myOptionId: null,
+  canClose: false,
   ...overrides,
 })
 
@@ -75,6 +78,7 @@ describe("QuackPoll", () => {
   beforeEach(() => {
     vi.mocked(castVote).mockReset()
     vi.mocked(removeVote).mockReset()
+    vi.mocked(closePoll).mockReset()
   })
 
   it("shows every answer's count, percentage and the total, in order", () => {
@@ -226,10 +230,83 @@ describe("QuackPoll", () => {
     await waitFor(() => expect(castVote).toHaveBeenCalledTimes(2))
   })
 
-  it("can't be voted on once closed", () => {
-    renderFeed({ closedAt: new Date("2026-01-02T12:00:00Z") })
+  it("shows a closed poll's final results with my pick, and can't be voted on", () => {
+    renderFeed({ closedAt: new Date("2026-01-02T12:00:00Z"), myOptionId: "o2" })
 
+    expect(screen.getByText("3 votes · Closed")).toBeInTheDocument()
     expect(answer("Pizza")).toBeDisabled()
     expect(answer("Soup")).toBeDisabled()
+    expectAnswer("Soup", "1 · 33%", true)
+  })
+
+  describe("closing", () => {
+    const closeButton = () => screen.getByRole("button", { name: "Close poll" })
+    const dialog = () => screen.getByRole("alertdialog")
+    const confirm = () =>
+      userEvent.click(within(dialog()).getByRole("button", { name: "Close poll" }))
+
+    it("is only offered to whoever may close it", () => {
+      renderFeed({ canClose: false })
+
+      expect(screen.queryByRole("button", { name: "Close poll" })).not.toBeInTheDocument()
+    })
+
+    it("asks first and changes nothing when I keep it open", async () => {
+      renderFeed({ canClose: true })
+
+      await userEvent.click(closeButton())
+      expect(within(dialog()).getByText("Close this poll?")).toBeInTheDocument()
+      await userEvent.click(within(dialog()).getByRole("button", { name: "Keep it open" }))
+
+      expect(closePoll).not.toHaveBeenCalled()
+      expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument()
+      expect(answer("Pizza")).toBeEnabled()
+    })
+
+    it("closes the poll once I confirm", async () => {
+      vi.mocked(closePoll).mockResolvedValue(
+        poll({ closedAt: new Date("2026-01-02T12:00:00Z"), canClose: false }),
+      )
+      renderFeed({ canClose: true })
+
+      await userEvent.click(closeButton())
+      await confirm()
+
+      expect(closePoll).toHaveBeenCalledWith("p1")
+      await waitFor(() => expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument())
+      expect(screen.getByText("3 votes · Closed")).toBeInTheDocument()
+      expect(answer("Pizza")).toBeDisabled()
+      expect(screen.queryByRole("button", { name: "Close poll" })).not.toBeInTheDocument()
+    })
+
+    it("keeps the dialog open with the reason when closing fails", async () => {
+      vi.mocked(closePoll).mockRejectedValue(new Error("Only the author can close this poll"))
+      renderFeed({ canClose: true })
+
+      await userEvent.click(closeButton())
+      await confirm()
+
+      expect(
+        await within(dialog()).findByText("Only the author can close this poll"),
+      ).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: /^Pizza/, hidden: true })).toBeEnabled()
+      expect(screen.queryByText("3 votes · Closed")).not.toBeInTheDocument()
+    })
+
+    it("waits for my vote to finish before closing", async () => {
+      const vote = deferred<Poll>()
+      vi.mocked(castVote).mockReturnValue(vote.promise)
+      vi.mocked(closePoll).mockReturnValue(neverAnswers())
+      renderFeed({ canClose: true })
+
+      await userEvent.click(answer("Soup"))
+      await userEvent.click(closeButton())
+      await confirm()
+
+      expect(closePoll).not.toHaveBeenCalled()
+
+      vote.resolve(poll({ myOptionId: "o2", canClose: true }))
+      await waitFor(() => expect(closePoll).toHaveBeenCalledWith("p1"))
+    })
   })
 })

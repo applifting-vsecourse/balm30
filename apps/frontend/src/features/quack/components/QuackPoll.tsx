@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 import type { Poll } from "@/features/quack/api/quackSchemas"
+import { ClosePollButton } from "@/features/quack/components/ClosePollButton"
 import { useVote } from "@/features/quack/hooks/useVote"
 
 const percentOf = (votes: number, total: number) =>
@@ -37,7 +38,7 @@ export function QuackPoll({ poll }: QuackPollProps) {
                 disabled={isClosed}
                 onClick={() => vote.mutate(isMine ? null : option.id)}
                 className={cn(
-                  "relative h-auto w-full justify-between gap-3 overflow-hidden py-2 text-left font-normal whitespace-normal",
+                  "relative h-auto w-full justify-between gap-3 overflow-hidden py-2 text-left font-normal whitespace-normal disabled:opacity-100",
                   isMine && "border-foreground font-medium",
                 )}
               >
@@ -58,7 +59,13 @@ export function QuackPoll({ poll }: QuackPollProps) {
           )
         })}
       </ul>
-      <p className="text-xs text-muted-foreground">{formatVotes(poll.totalVotes)}</p>
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-xs text-muted-foreground">
+          {formatVotes(poll.totalVotes)}
+          {isClosed ? " · Closed" : null}
+        </p>
+        {poll.canClose ? <ClosePollButton pollId={poll.id} /> : null}
+      </div>
 
       {vote.isError ? (
         <Alert variant="destructive">

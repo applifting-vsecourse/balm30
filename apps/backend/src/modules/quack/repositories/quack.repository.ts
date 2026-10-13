@@ -23,6 +23,7 @@ const mapPrismaQuackToDomain = (
     user?: PrismaUser;
     poll?: PrismaPollWithViewer | null;
   },
+  viewerId: string,
 ): Quack => ({
   id: quack.id,
   text: quack.text,
@@ -37,7 +38,7 @@ const mapPrismaQuackToDomain = (
         username: quack.user.displayUsername ?? quack.user.username ?? '',
       }
     : undefined,
-  poll: quack.poll ? mapPrismaPollToDomain(quack.poll) : null,
+  poll: quack.poll ? mapPrismaPollToDomain(quack.poll, viewerId) : null,
 });
 
 /**
@@ -64,7 +65,7 @@ export class QuackRepository {
       include: includeQuackRelationsFor(viewerId),
       orderBy: { createdAt: 'desc' },
     });
-    return quacks.map(mapPrismaQuackToDomain);
+    return quacks.map((quack) => mapPrismaQuackToDomain(quack, viewerId));
   }
 
   async createQuack(createQuackData: {
@@ -95,6 +96,6 @@ export class QuackRepository {
       },
       include: includeQuackRelationsFor(createQuackData.userId),
     });
-    return mapPrismaQuackToDomain(quack);
+    return mapPrismaQuackToDomain(quack, createQuackData.userId);
   }
 }

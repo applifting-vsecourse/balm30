@@ -1,6 +1,7 @@
 import {
   Poll,
   PollClosedError,
+  PollNotAuthorError,
   PollNotFoundError,
   PollOptionNotFoundError,
   VoteChange,
@@ -10,11 +11,13 @@ import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Logger,
   NotFoundException,
 } from '@nestjs/common';
 import { mock } from 'jest-mock-extended';
 import {
+  NOT_POLL_AUTHOR_MESSAGE,
   OPTION_NOT_IN_POLL_MESSAGE,
   POLL_CLOSED_MESSAGE,
   POLL_NOT_FOUND_MESSAGE,
@@ -33,6 +36,7 @@ const aPoll = (overrides: Partial<Poll> = {}): Poll => ({
   ],
   totalVotes: 3,
   myOptionId: 'o1',
+  canClose: false,
   ...overrides,
 });
 
@@ -150,5 +154,40 @@ describe('PollsService', () => {
     const service = new PollsService(repository);
 
     await expect(service.vote(user, 'p1', 'o1')).rejects.toBe(failure);
+  });
+
+  describe('closing', () => {
+    it("closes the author's poll and returns it as they see it", async () => {
+      const closed = aPoll({ closedAt: new Date('2026-01-02T12:00:00Z') });
+      const repository = mock<PollRepository>();
+      repository.getPoll.mockResolvedValue(closed);
+
+      const service = new PollsService(repository);
+
+      await expect(service.closePoll(user, 'p1')).resolves.toEqual(closed);
+      expect(repository.closePoll).toHaveBeenCalledWith('p1', 'u1');
+      expect(repository.getPoll).toHaveBeenCalledWith('p1', 'u1');
+    });
+
+    it.each([
+      [
+        'someone who is not the author',
+        new PollNotAuthorError('p1'),
+        new ForbiddenException(NOT_POLL_AUTHOR_MESSAGE),
+      ],
+      [
+        'a poll that does not exist',
+        new PollNotFoundError('p1'),
+        new NotFoundException(POLL_NOT_FOUND_MESSAGE),
+      ],
+    ])('rejects closing by %s', async (_case, domainError, httpError) => {
+      const repository = mock<PollRepository>();
+      repository.closePoll.mockRejectedValue(domainError);
+
+      const service = new PollsService(repository);
+
+      await expect(service.closePoll(user, 'p1')).rejects.toEqual(httpError);
+      expect(repository.getPoll).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,6 +1,7 @@
 import {
   Poll,
   PollClosedError,
+  PollNotAuthorError,
   PollNotFoundError,
   PollOptionNotFoundError,
   VoteChange,
@@ -10,6 +11,7 @@ import { Identity } from '@/shared/auth/domain/identity';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   Logger,
   NotFoundException,
@@ -19,6 +21,7 @@ export const POLL_NOT_FOUND_MESSAGE = 'This poll does not exist';
 export const POLL_CLOSED_MESSAGE = 'This poll is closed';
 export const OPTION_NOT_IN_POLL_MESSAGE =
   'That answer is not part of this poll';
+export const NOT_POLL_AUTHOR_MESSAGE = 'Only the author can close this poll';
 
 const toHttpError = (error: unknown): unknown => {
   if (error instanceof PollNotFoundError) {
@@ -29,6 +32,9 @@ const toHttpError = (error: unknown): unknown => {
   }
   if (error instanceof PollOptionNotFoundError) {
     return new BadRequestException(OPTION_NOT_IN_POLL_MESSAGE);
+  }
+  if (error instanceof PollNotAuthorError) {
+    return new ForbiddenException(NOT_POLL_AUTHOR_MESSAGE);
   }
   return error;
 };
@@ -49,6 +55,15 @@ export class PollsService {
     return this.applyVoteChange(pollId, user, () =>
       this.pollRepository.removeVote(pollId, user.id),
     );
+  }
+
+  async closePoll(user: Identity, pollId: string): Promise<Poll> {
+    try {
+      await this.pollRepository.closePoll(pollId, user.id);
+      return await this.pollRepository.getPoll(pollId, user.id);
+    } catch (error) {
+      throw toHttpError(error);
+    }
   }
 
   private async applyVoteChange(
