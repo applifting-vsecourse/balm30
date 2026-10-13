@@ -21,10 +21,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { moodLabels, MOODS, type Mood } from "@/lib/mood"
 import { cn } from "@/lib/utils"
 
-import { MOODS } from "@/features/quack/api/quackSchemas"
-import { moodLabels } from "@/features/quack/components/QuackMood"
 import { useAddQuack } from "@/features/quack/hooks/useAddQuack"
 
 // Mirrors the server-side DTO (MaxLength(280)) so the user is told before
@@ -44,13 +43,14 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
-type QuackFormProps = { className?: string }
+type QuackFormProps = { defaultMood?: Mood | null; className?: string }
 
-export function QuackForm({ className }: QuackFormProps) {
+export function QuackForm({ defaultMood, className }: QuackFormProps) {
   const addQuack = useAddQuack()
+  const emptyValues: FormValues = { text: "", mood: defaultMood ?? NO_MOOD }
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { text: "", mood: NO_MOOD },
+    defaultValues: emptyValues,
   })
 
   const text = useWatch({ control: form.control, name: "text" })
@@ -59,7 +59,7 @@ export function QuackForm({ className }: QuackFormProps) {
   const handleSubmit = (values: FormValues) => {
     addQuack.mutate(
       { text: values.text, mood: values.mood === NO_MOOD ? null : values.mood },
-      { onSuccess: () => form.reset() },
+      { onSuccess: () => form.reset(emptyValues) },
     )
   }
 
