@@ -24,5 +24,5 @@ export function useSignIn() {
         refetchType: "all",
       })
     },
-  });
+  })
 }
