@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router"
-import { LogOut, Settings } from "lucide-react"
+import { BarChart3, LogOut, Settings } from "lucide-react"
 
 import { ROUTES } from "@/app/routes"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
@@ -15,6 +15,7 @@ import {
 
 import { useSession } from "@/features/auth/hooks/useSession"
 import { useSignOut } from "@/features/auth/hooks/useSignOut"
+import { isAdmin } from "@/features/auth/lib/roles"
 
 export function HeaderMenu() {
   const { user } = useSession()
@@ -69,6 +70,14 @@ export function HeaderMenu() {
             Settings
           </Link>
         </DropdownMenuItem>
+        {isAdmin(user) ? (
+          <DropdownMenuItem asChild>
+            <Link to={ROUTES.stats}>
+              <BarChart3 className="size-4" />
+              Stats
+            </Link>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           onSelect={() => signOut.mutate()}
           disabled={signOut.isPending}
