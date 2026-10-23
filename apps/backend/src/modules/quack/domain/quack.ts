@@ -1,4 +1,5 @@
 import { Poll } from '@/modules/quack/domain/poll';
+import { ADMIN_ROLE, Identity } from '@/shared/auth/domain/identity';
 
 export const QUACK_TEXT_MAX_LENGTH = 280;
 
@@ -28,19 +29,19 @@ export type Quack = {
   canDelete: boolean;
 };
 
+export type QuackRecord = Omit<Quack, 'canDelete'>;
+
 export type QuackFilter = {
   search?: string;
   authorId?: string;
 };
 
-export class QuackNotFoundError extends Error {
-  constructor(quackId: string) {
-    super(`Quack ${quackId} does not exist`);
-  }
-}
+export const isQuackAuthor = (
+  viewer: Pick<Identity, 'id'>,
+  authorId: string,
+): boolean => viewer.id === authorId;
 
-export class QuackNotAuthorError extends Error {
-  constructor(quackId: string) {
-    super(`Only the author can delete quack ${quackId}`);
-  }
-}
+export const canDeleteQuack = (
+  viewer: Pick<Identity, 'id' | 'role'>,
+  authorId: string,
+): boolean => isQuackAuthor(viewer, authorId) || viewer.role === ADMIN_ROLE;

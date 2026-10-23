@@ -14,6 +14,7 @@ type QuackListProps = {
   search?: string
   scope?: QuackScope
   onWriteFirst?: () => void
+  viewerId?: string
 }
 
 export function QuackList({
@@ -24,6 +25,7 @@ export function QuackList({
   search,
   scope = "all",
   onWriteFirst,
+  viewerId,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -67,6 +69,7 @@ export function QuackList({
         <QuackItem
           key={quack.id}
           quack={quack}
+          viewerId={viewerId}
         />
       ))}
     </div>

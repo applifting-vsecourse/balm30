@@ -36,7 +36,8 @@ export class QuackResponseDto {
   poll!: PollResponseDto | null;
 
   @ApiProperty({
-    description: 'Whether the signed-in user can delete this quack',
+    description:
+      'Whether the signed-in user can delete this quack: they wrote it, or they are an admin',
   })
   canDelete!: boolean;
 

@@ -1,3 +1,5 @@
+export const ADMIN_ROLE = 'admin';
+
 export class Identity {
   constructor(
     public readonly id: string,
