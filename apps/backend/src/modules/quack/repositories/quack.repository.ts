@@ -5,13 +5,7 @@ import {
   User as PrismaUser,
 } from '@/generated/prisma/client';
 import { NewPoll } from '@/modules/quack/domain/poll';
-import {
-  Mood,
-  Quack,
-  QuackFilter,
-  QuackNotAuthorError,
-  QuackNotFoundError,
-} from '@/modules/quack/domain/quack';
+import { Mood, QuackFilter, QuackRecord } from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
 import {
   mapPrismaPollToDomain,
@@ -31,7 +25,7 @@ const mapPrismaQuackToDomain = (
     poll?: PrismaPollWithViewer | null;
   },
   viewerId: string,
-): Quack => ({
+): QuackRecord => ({
   id: quack.id,
   text: quack.text,
   mood: quack.mood,
@@ -46,7 +40,6 @@ const mapPrismaQuackToDomain = (
       }
     : undefined,
   poll: quack.poll ? mapPrismaPollToDomain(quack.poll, viewerId) : null,
-  canDelete: quack.userId === viewerId,
 });
 
 const searchCondition = (search: string): Prisma.QuackWhereInput => ({
@@ -69,7 +62,7 @@ export class QuackRepository {
   async getQuacks(
     viewerId: string,
     { search, authorId }: QuackFilter = {},
-  ): Promise<Quack[]> {
+  ): Promise<QuackRecord[]> {
     const quacks = await this.prisma.quack.findMany({
       where: {
         ...(search ? searchCondition(search) : {}),
@@ -86,7 +79,7 @@ export class QuackRepository {
     mood: Mood | null;
     userId: string;
     poll: NewPoll | null;
-  }): Promise<Quack> {
+  }): Promise<QuackRecord> {
     const { poll } = createQuackData;
     const quack = await this.prisma.quack.create({
       data: {
@@ -112,20 +105,15 @@ export class QuackRepository {
     return mapPrismaQuackToDomain(quack, createQuackData.userId);
   }
 
-  async deleteQuack(quackId: string, userId: string): Promise<void> {
-    const { count } = await this.prisma.quack.deleteMany({
-      where: { id: quackId, userId },
-    });
-    if (count > 0) {
-      return;
-    }
-
-    const exists = await this.prisma.quack.findUnique({
+  async getAuthorId(quackId: string): Promise<string | null> {
+    const quack = await this.prisma.quack.findUnique({
       where: { id: quackId },
-      select: { id: true },
+      select: { userId: true },
     });
-    throw exists
-      ? new QuackNotAuthorError(quackId)
-      : new QuackNotFoundError(quackId);
+    return quack?.userId ?? null;
+  }
+
+  async deleteQuack(quackId: string): Promise<void> {
+    await this.prisma.quack.deleteMany({ where: { id: quackId } });
   }
 }

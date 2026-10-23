@@ -8,9 +8,9 @@ import { QuackPoll } from "@/features/quack/components/QuackPoll"
 import { UsersName } from "@/features/quack/components/UsersName"
 import { UsersUserName } from "@/features/quack/components/UsersUserName"
 
-type QuackItemProps = { quack: Quack }
+type QuackItemProps = { quack: Quack; viewerId?: string }
 
-export function QuackItem({ quack }: QuackItemProps) {
+export function QuackItem({ quack, viewerId }: QuackItemProps) {
   const { name, username } = quack.user
 
   const initials = name
@@ -41,7 +41,11 @@ export function QuackItem({ quack }: QuackItemProps) {
           ) : null}
           {quack.canDelete ? (
             <span className="ml-auto">
-              <DeleteQuackButton quackId={quack.id} />
+              <DeleteQuackButton
+                quackId={quack.id}
+                authorUsername={username}
+                isOwnQuack={quack.userId === viewerId}
+              />
             </span>
           ) : null}
         </div>

@@ -30,21 +30,26 @@ const someoneElsesQuack = quack({
   canDelete: false,
 })
 
-function Feed() {
+function Feed({ viewerId }: { viewerId: string }) {
   const { data } = useQuery({
     queryKey: quackKeys.list(""),
     queryFn: (): Quack[] => [],
     enabled: false,
   })
-  return <QuackList quacks={data ?? []} />
+  return (
+    <QuackList
+      quacks={data ?? []}
+      viewerId={viewerId}
+    />
+  )
 }
 
-const renderFeed = (quacks: Quack[]) => {
+const renderFeed = (quacks: Quack[], viewerId = "u1") => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   queryClient.setQueryData(quackKeys.list(""), quacks)
   render(
     <QueryClientProvider client={queryClient}>
-      <Feed />
+      <Feed viewerId={viewerId} />
     </QueryClientProvider>,
   )
 }
@@ -100,5 +105,42 @@ describe("DeleteQuackButton", () => {
     expect(await screen.findByText("Only the author can delete this quack")).toBeInTheDocument()
     expect(screen.getByRole("alertdialog")).toBeInTheDocument()
     expect(screen.getByText("my own quack")).toBeInTheDocument()
+  })
+
+  describe("as a moderator", () => {
+    const moderatorsView = [{ ...someoneElsesQuack, canDelete: true }]
+
+    it("names the author of someone else's quack before deleting it", async () => {
+      renderFeed(moderatorsView, "admin1")
+
+      await openDeleteDialog()
+
+      expect(
+        screen.getByRole("alertdialog", { name: "Delete @DeepDuckThoughts's quack?" }),
+      ).toBeInTheDocument()
+      expect(screen.getByText(/You're deleting it as a moderator/)).toBeInTheDocument()
+    })
+
+    it("deletes someone else's quack and removes it from the feed", async () => {
+      vi.mocked(deleteQuack).mockResolvedValue()
+      renderFeed(moderatorsView, "admin1")
+
+      await openDeleteDialog()
+      await confirmDelete()
+
+      expect(deleteQuack).toHaveBeenCalledWith("q2")
+      await waitFor(() =>
+        expect(screen.queryByText("someone else's quack")).not.toBeInTheDocument(),
+      )
+    })
+
+    it("asks the usual question about their own quack", async () => {
+      renderFeed([quack({ userId: "admin1" })], "admin1")
+
+      await openDeleteDialog()
+
+      expect(screen.getByRole("alertdialog", { name: "Delete this quack?" })).toBeInTheDocument()
+      expect(screen.queryByText(/as a moderator/)).not.toBeInTheDocument()
+    })
   })
 })

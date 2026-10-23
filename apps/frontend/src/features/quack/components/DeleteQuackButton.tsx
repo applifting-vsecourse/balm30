@@ -17,9 +17,13 @@ import { Button } from "@/components/ui/button"
 
 import { useDeleteQuack } from "@/features/quack/hooks/useDeleteQuack"
 
-type DeleteQuackButtonProps = { quackId: string }
+type DeleteQuackButtonProps = {
+  quackId: string
+  authorUsername: string
+  isOwnQuack: boolean
+}
 
-export function DeleteQuackButton({ quackId }: DeleteQuackButtonProps) {
+export function DeleteQuackButton({ quackId, authorUsername, isOwnQuack }: DeleteQuackButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const remove = useDeleteQuack(quackId)
 
@@ -45,8 +49,11 @@ export function DeleteQuackButton({ quackId }: DeleteQuackButtonProps) {
       </AlertDialogTrigger>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete this quack?</AlertDialogTitle>
+          <AlertDialogTitle>
+            {isOwnQuack ? "Delete this quack?" : `Delete @${authorUsername}'s quack?`}
+          </AlertDialogTitle>
           <AlertDialogDescription>
+            {isOwnQuack ? null : "You're deleting it as a moderator. "}
             It disappears from the feed for everyone, together with its poll and votes. This
             can&apos;t be undone.
           </AlertDialogDescription>

@@ -6,6 +6,7 @@ import { z } from "zod"
 import { Seo } from "@/components/Seo"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
+import { useSession } from "@/features/auth/hooks/useSession"
 import { profileQueryOptions } from "@/features/profile/api/profileQueryOptions"
 import { QUACK_SCOPES, type QuackScope } from "@/features/quack/api/quackSchemas"
 import { quacksQueryOptions } from "@/features/quack/api/quacksQueryOptions"
@@ -33,6 +34,7 @@ function QuacksPage() {
   const navigate = useNavigate({ from: Route.fullPath })
   const quacksQuery = useQuery(quacksQueryOptions(search, scope))
   const profileQuery = useQuery(profileQueryOptions())
+  const { user } = useSession()
   const formRef = useRef<QuackFormHandle>(null)
 
   const handleSearchChange = useCallback(
@@ -91,6 +93,7 @@ function QuacksPage() {
               search={search}
               scope={scope}
               onWriteFirst={() => formRef.current?.focusText()}
+              viewerId={user?.id}
             />
           </TabsContent>
         </Tabs>
