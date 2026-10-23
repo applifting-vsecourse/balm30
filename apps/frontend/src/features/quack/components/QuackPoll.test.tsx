@@ -34,6 +34,7 @@ const pollQuack = (overrides: Partial<Poll> = {}): Quack => ({
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Pond Admin", username: "PondAdmin" },
   poll: poll(overrides),
+  canDelete: false,
 })
 
 function Feed() {

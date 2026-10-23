@@ -14,6 +14,7 @@ const quack = (overrides: Partial<Quack> = {}): Quack => ({
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
   poll: null,
+  canDelete: false,
   ...overrides,
 })
 
@@ -66,5 +67,33 @@ describe("QuackList", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /reload/i }))
     expect(onReload).toHaveBeenCalledOnce()
+  })
+  it("offers to write the first quack when I have none", async () => {
+    const onWriteFirst = vi.fn()
+    render(
+      <QuackList
+        quacks={[]}
+        scope="mine"
+        onWriteFirst={onWriteFirst}
+      />,
+    )
+
+    expect(screen.getByText("You haven't posted any quacks yet.")).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole("button", { name: "Write your first quack" }))
+    expect(onWriteFirst).toHaveBeenCalledOnce()
+  })
+
+  it("says when none of my quacks match the search", () => {
+    render(
+      <QuackList
+        quacks={[]}
+        scope="mine"
+        search="pond"
+      />,
+    )
+
+    expect(screen.getByText("None of your quacks match “pond”.")).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: "Write your first quack" })).not.toBeInTheDocument()
   })
 })

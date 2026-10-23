@@ -1,16 +1,35 @@
-import { keepPreviousData, queryOptions } from "@tanstack/react-query"
+import { queryOptions } from "@tanstack/react-query"
 
 import { api } from "@/lib/api-client"
 
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import { quacksSchema } from "@/features/quack/api/quackSchemas"
+import { quacksSchema, type Quack, type QuackScope } from "@/features/quack/api/quackSchemas"
 
-export const quacksQueryOptions = (search = "") =>
+const keepPreviousDataWithinScope =
+  (scope: QuackScope) =>
+  (previous: Quack[] | undefined, previousQuery?: { queryKey: readonly unknown[] }) => {
+    const [, , previousFilter] = previousQuery?.queryKey ?? []
+    const isSameScope =
+      typeof previousFilter === "object" &&
+      previousFilter !== null &&
+      "scope" in previousFilter &&
+      previousFilter.scope === scope
+    return isSameScope ? previous : undefined
+  }
+
+export const quacksQueryOptions = (search = "", scope: QuackScope = "all") =>
   queryOptions({
-    queryKey: quackKeys.list(search),
+    queryKey: quackKeys.list(search, scope),
     queryFn: async () =>
       quacksSchema.parse(
-        await api.get("quacks", { searchParams: search ? { q: search } : undefined }).json(),
+        await api
+          .get("quacks", {
+            searchParams: {
+              ...(search ? { q: search } : {}),
+              ...(scope === "mine" ? { scope } : {}),
+            },
+          })
+          .json(),
       ),
-    placeholderData: keepPreviousData,
+    placeholderData: keepPreviousDataWithinScope(scope),
   })

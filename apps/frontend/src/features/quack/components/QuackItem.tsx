@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { formatDate } from "@/lib/date"
 
 import type { Quack } from "@/features/quack/api/quackSchemas"
+import { DeleteQuackButton } from "@/features/quack/components/DeleteQuackButton"
 import { QuackMood } from "@/features/quack/components/QuackMood"
 import { QuackPoll } from "@/features/quack/components/QuackPoll"
 import { UsersName } from "@/features/quack/components/UsersName"
@@ -37,6 +38,11 @@ export function QuackItem({ quack }: QuackItemProps) {
               <span className="text-xs text-muted-foreground">·</span>
               <QuackMood mood={quack.mood} />
             </>
+          ) : null}
+          {quack.canDelete ? (
+            <span className="ml-auto">
+              <DeleteQuackButton quackId={quack.id} />
+            </span>
           ) : null}
         </div>
         {quack.text ? (

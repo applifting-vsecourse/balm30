@@ -15,6 +15,10 @@ export const POLL_OPTION_MAX_LENGTH = 50
 export const POLL_MIN_OPTIONS = 2
 export const POLL_MAX_OPTIONS = 4
 
+export const QUACK_SCOPES = ["all", "mine"] as const
+
+export type QuackScope = (typeof QUACK_SCOPES)[number]
+
 export const pollOptionSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -39,6 +43,7 @@ export const quackSchema = z.object({
   createdAt: z.coerce.date(),
   user: quackUserSchema,
   poll: pollSchema.nullable(),
+  canDelete: z.boolean(),
 })
 
 export const quacksSchema = z.array(quackSchema)

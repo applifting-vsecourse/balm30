@@ -1,5 +1,6 @@
+import { QUACK_SCOPES, QuackScope } from '@/modules/quack/domain/quack';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, MaxLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class SearchQuacksQueryDto {
   @ApiPropertyOptional({
@@ -12,4 +13,14 @@ export class SearchQuacksQueryDto {
   @IsString()
   @MaxLength(280)
   q?: string;
+
+  @ApiPropertyOptional({
+    description:
+      "Whose quacks to list: everyone's, or only the signed-in user's.",
+    enum: QUACK_SCOPES,
+    default: 'all',
+  })
+  @IsOptional()
+  @IsIn(QUACK_SCOPES)
+  scope?: QuackScope;
 }
