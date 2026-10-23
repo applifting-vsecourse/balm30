@@ -1,10 +1,17 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import {
+  Prisma,
   Quack as PrismaQuack,
   User as PrismaUser,
 } from '@/generated/prisma/client';
 import { NewPoll } from '@/modules/quack/domain/poll';
-import { Mood, Quack } from '@/modules/quack/domain/quack';
+import {
+  Mood,
+  Quack,
+  QuackFilter,
+  QuackNotAuthorError,
+  QuackNotFoundError,
+} from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
 import {
   mapPrismaPollToDomain,
@@ -39,6 +46,16 @@ const mapPrismaQuackToDomain = (
       }
     : undefined,
   poll: quack.poll ? mapPrismaPollToDomain(quack.poll, viewerId) : null,
+  canDelete: quack.userId === viewerId,
+});
+
+const searchCondition = (search: string): Prisma.QuackWhereInput => ({
+  OR: [
+    { text: { contains: search, mode: 'insensitive' } },
+    { user: { name: { contains: search, mode: 'insensitive' } } },
+    { user: { username: { contains: search, mode: 'insensitive' } } },
+    { poll: { question: { contains: search, mode: 'insensitive' } } },
+  ],
 });
 
 /**
@@ -49,22 +66,15 @@ const mapPrismaQuackToDomain = (
 export class QuackRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getQuacks(viewerId: string, search?: string): Promise<Quack[]> {
+  async getQuacks(
+    viewerId: string,
+    { search, authorId }: QuackFilter = {},
+  ): Promise<Quack[]> {
     const quacks = await this.prisma.quack.findMany({
-      where: search
-        ? {
-            OR: [
-              { text: { contains: search, mode: 'insensitive' } },
-              { user: { name: { contains: search, mode: 'insensitive' } } },
-              {
-                user: { username: { contains: search, mode: 'insensitive' } },
-              },
-              {
-                poll: { question: { contains: search, mode: 'insensitive' } },
-              },
-            ],
-          }
-        : undefined,
+      where: {
+        ...(search ? searchCondition(search) : {}),
+        ...(authorId ? { userId: authorId } : {}),
+      },
       include: includeQuackRelationsFor(viewerId),
       orderBy: { createdAt: 'desc' },
     });
@@ -100,5 +110,22 @@ export class QuackRepository {
       include: includeQuackRelationsFor(createQuackData.userId),
     });
     return mapPrismaQuackToDomain(quack, createQuackData.userId);
+  }
+
+  async deleteQuack(quackId: string, userId: string): Promise<void> {
+    const { count } = await this.prisma.quack.deleteMany({
+      where: { id: quackId, userId },
+    });
+    if (count > 0) {
+      return;
+    }
+
+    const exists = await this.prisma.quack.findUnique({
+      where: { id: quackId },
+      select: { id: true },
+    });
+    throw exists
+      ? new QuackNotAuthorError(quackId)
+      : new QuackNotFoundError(quackId);
   }
 }

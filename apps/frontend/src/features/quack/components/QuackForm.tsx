@@ -1,4 +1,4 @@
-import { useId } from "react"
+import { useId, useImperativeHandle, type Ref } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { BarChart3, Loader2, Plus, X } from "lucide-react"
 import { useFieldArray, useForm, useWatch, type Control } from "react-hook-form"
@@ -91,15 +91,23 @@ const EMPTY_POLL: NonNullable<FormValues["poll"]> = {
   options: Array.from({ length: POLL_MIN_OPTIONS }, () => ({ text: "" })),
 }
 
-type QuackFormProps = { defaultMood?: Mood | null; className?: string }
+export type QuackFormHandle = { focusText: () => void }
 
-export function QuackForm({ defaultMood, className }: QuackFormProps) {
+type QuackFormProps = {
+  defaultMood?: Mood | null
+  className?: string
+  ref?: Ref<QuackFormHandle>
+}
+
+export function QuackForm({ defaultMood, className, ref }: QuackFormProps) {
   const addQuack = useAddQuack()
   const emptyValues: FormValues = { text: "", mood: defaultMood ?? NO_MOOD, poll: null }
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: emptyValues,
   })
+
+  useImperativeHandle(ref, () => ({ focusText: () => form.setFocus("text") }), [form])
 
   const text = useWatch({ control: form.control, name: "text" })
   const length = text?.length ?? 0

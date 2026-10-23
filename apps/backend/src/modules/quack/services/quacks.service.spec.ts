@@ -1,12 +1,26 @@
 // Example unit test — the pattern to copy for your own services.
 // The repository is mocked, so the test exercises the service in isolation.
 import { Poll } from '@/modules/quack/domain/poll';
-import { Quack } from '@/modules/quack/domain/quack';
+import {
+  Quack,
+  QuackNotAuthorError,
+  QuackNotFoundError,
+} from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
-import { BadRequestException, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
 import { mock } from 'jest-mock-extended';
-import { QuacksService, TEXT_OR_POLL_REQUIRED_MESSAGE } from './quacks.service';
+import {
+  NOT_QUACK_AUTHOR_MESSAGE,
+  QUACK_NOT_FOUND_MESSAGE,
+  QuacksService,
+  TEXT_OR_POLL_REQUIRED_MESSAGE,
+} from './quacks.service';
 
 const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   id: 'q1',
@@ -17,6 +31,7 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   updatedAt: new Date('2026-01-01T12:00:00Z'),
   user: { id: 'u1', name: 'Caffeinated Duck', username: 'CaffeinatedDuck' },
   poll: null,
+  canDelete: true,
   ...overrides,
 });
 
@@ -32,7 +47,30 @@ describe('QuacksService', () => {
 
     await expect(service.getQuacks(viewer)).resolves.toEqual(quacks);
     expect(repository.getQuacks).toHaveBeenCalledTimes(1);
-    expect(repository.getQuacks).toHaveBeenCalledWith('u1');
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', {});
+  });
+
+  it("lists only the signed-in user's quacks in the mine scope", async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+
+    const service = new QuacksService(repository);
+    await service.getQuacks(viewer, { scope: 'mine' });
+
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', { authorId: 'u1' });
+  });
+
+  it("searches only the signed-in user's quacks in the mine scope", async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+
+    const service = new QuacksService(repository);
+    await service.getQuacks(viewer, { search: ' pond ', scope: 'mine' });
+
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', {
+      search: 'pond',
+      authorId: 'u1',
+    });
   });
 
   it('searches with the trimmed term and a leading @ removed', async () => {
@@ -43,9 +81,11 @@ describe('QuacksService', () => {
     const service = new QuacksService(repository);
 
     await expect(
-      service.getQuacks(viewer, '  @CaffeinatedDuck '),
+      service.getQuacks(viewer, { search: '  @CaffeinatedDuck ' }),
     ).resolves.toEqual(quacks);
-    expect(repository.getQuacks).toHaveBeenCalledWith('u1', 'CaffeinatedDuck');
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', {
+      search: 'CaffeinatedDuck',
+    });
   });
 
   it.each(['', '   ', '@'])(
@@ -55,9 +95,9 @@ describe('QuacksService', () => {
       repository.getQuacks.mockResolvedValue([]);
 
       const service = new QuacksService(repository);
-      await service.getQuacks(viewer, search);
+      await service.getQuacks(viewer, { search });
 
-      expect(repository.getQuacks).toHaveBeenCalledWith('u1');
+      expect(repository.getQuacks).toHaveBeenCalledWith('u1', {});
     },
   );
 
@@ -69,7 +109,7 @@ describe('QuacksService', () => {
       .mockImplementation(() => undefined);
 
     const service = new QuacksService(repository);
-    await service.getQuacks(viewer, 'pond');
+    await service.getQuacks(viewer, { search: 'pond' });
 
     expect(log).toHaveBeenCalledWith('Quack search q="pond" results=2');
     log.mockRestore();
@@ -83,7 +123,7 @@ describe('QuacksService', () => {
       .mockImplementation(() => undefined);
 
     const service = new QuacksService(repository);
-    await service.getQuacks(viewer, '  ');
+    await service.getQuacks(viewer, { search: '  ' });
 
     expect(log).not.toHaveBeenCalled();
     log.mockRestore();
@@ -207,4 +247,61 @@ describe('QuacksService', () => {
       expect(repository.createQuack).not.toHaveBeenCalled();
     },
   );
+
+  describe('deleting', () => {
+    it('deletes the quack as the signed-in user', async () => {
+      const repository = mock<QuackRepository>();
+      repository.deleteQuack.mockResolvedValue();
+
+      const service = new QuacksService(repository);
+
+      await expect(service.deleteQuack(viewer, 'q1')).resolves.toBeUndefined();
+      expect(repository.deleteQuack).toHaveBeenCalledWith('q1', 'u1');
+    });
+
+    it('logs the deleted quack', async () => {
+      const repository = mock<QuackRepository>();
+      repository.deleteQuack.mockResolvedValue();
+      const log = jest
+        .spyOn(Logger.prototype, 'log')
+        .mockImplementation(() => undefined);
+
+      await new QuacksService(repository).deleteQuack(viewer, 'q1');
+
+      expect(log).toHaveBeenCalledWith('Quack deleted quack=q1');
+      log.mockRestore();
+    });
+
+    it.each([
+      [
+        'someone who is not the author',
+        new QuackNotAuthorError('q1'),
+        new ForbiddenException(NOT_QUACK_AUTHOR_MESSAGE),
+      ],
+      [
+        'a quack that does not exist',
+        new QuackNotFoundError('q1'),
+        new NotFoundException(QUACK_NOT_FOUND_MESSAGE),
+      ],
+    ])('rejects deleting by %s', async (_case, domainError, httpError) => {
+      const repository = mock<QuackRepository>();
+      repository.deleteQuack.mockRejectedValue(domainError);
+
+      const service = new QuacksService(repository);
+
+      await expect(service.deleteQuack(viewer, 'q1')).rejects.toEqual(
+        httpError,
+      );
+    });
+
+    it('passes unexpected errors through unchanged', async () => {
+      const failure = new Error('connection lost');
+      const repository = mock<QuackRepository>();
+      repository.deleteQuack.mockRejectedValue(failure);
+
+      const service = new QuacksService(repository);
+
+      await expect(service.deleteQuack(viewer, 'q1')).rejects.toBe(failure);
+    });
+  });
 });

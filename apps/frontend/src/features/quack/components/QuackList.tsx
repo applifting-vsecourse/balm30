@@ -3,7 +3,7 @@ import { Loader2, RefreshCw } from "lucide-react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 
-import type { Quack } from "@/features/quack/api/quackSchemas"
+import type { Quack, QuackScope } from "@/features/quack/api/quackSchemas"
 import { QuackItem } from "@/features/quack/components/QuackItem"
 
 type QuackListProps = {
@@ -12,9 +12,19 @@ type QuackListProps = {
   error?: Error
   onReload?: () => void
   search?: string
+  scope?: QuackScope
+  onWriteFirst?: () => void
 }
 
-export function QuackList({ quacks, isLoading, error, onReload, search }: QuackListProps) {
+export function QuackList({
+  quacks,
+  isLoading,
+  error,
+  onReload,
+  search,
+  scope = "all",
+  onWriteFirst,
+}: QuackListProps) {
   return (
     <div className="flex flex-col">
       {isLoading && quacks.length === 0 ? (
@@ -46,9 +56,11 @@ export function QuackList({ quacks, isLoading, error, onReload, search }: QuackL
       ) : null}
 
       {!isLoading && !error && quacks.length === 0 ? (
-        <p className="py-8 text-center text-sm text-muted-foreground">
-          {search ? `No quacks match “${search}”.` : "No quacks yet. Post the first one."}
-        </p>
+        <EmptyState
+          search={search}
+          scope={scope}
+          onWriteFirst={onWriteFirst}
+        />
       ) : null}
 
       {quacks.map((quack) => (
@@ -58,5 +70,36 @@ export function QuackList({ quacks, isLoading, error, onReload, search }: QuackL
         />
       ))}
     </div>
+  )
+}
+
+type EmptyStateProps = Pick<QuackListProps, "search" | "scope" | "onWriteFirst">
+
+function EmptyState({ search, scope, onWriteFirst }: EmptyStateProps) {
+  if (scope === "mine" && !search) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-8">
+        <p className="text-sm text-muted-foreground">You haven&apos;t posted any quacks yet.</p>
+        {onWriteFirst ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onWriteFirst}
+          >
+            Write your first quack
+          </Button>
+        ) : null}
+      </div>
+    )
+  }
+
+  return (
+    <p className="py-8 text-center text-sm text-muted-foreground">
+      {scope === "mine"
+        ? `None of your quacks match “${search}”.`
+        : search
+          ? `No quacks match “${search}”.`
+          : "No quacks yet. Post the first one."}
+    </p>
   )
 }

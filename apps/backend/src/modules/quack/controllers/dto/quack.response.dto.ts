@@ -35,6 +35,11 @@ export class QuackResponseDto {
   @ApiProperty({ type: PollResponseDto, nullable: true })
   poll!: PollResponseDto | null;
 
+  @ApiProperty({
+    description: 'Whether the signed-in user can delete this quack',
+  })
+  canDelete!: boolean;
+
   static fromDomain(quack: Quack): QuackResponseDto {
     if (!quack.user) {
       throw new Error(
@@ -53,6 +58,7 @@ export class QuackResponseDto {
         username: quack.user.username,
       },
       poll: quack.poll ? PollResponseDto.fromDomain(quack.poll) : null,
+      canDelete: quack.canDelete,
     };
   }
 }
