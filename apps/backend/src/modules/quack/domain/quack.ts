@@ -17,6 +17,11 @@ export type QuackAuthor = {
   username: string;
 };
 
+export type ReplyingTo = {
+  quackId: string;
+  username: string | null;
+};
+
 export type Quack = {
   id: string;
   text: string;
@@ -24,17 +29,32 @@ export type Quack = {
   userId: string;
   createdAt: Date;
   updatedAt: Date;
+  deletedAt: Date | null;
   user?: QuackAuthor;
   poll: Poll | null;
+  replyingTo: ReplyingTo | null;
+  replyCount: number;
   canDelete: boolean;
 };
 
 export type QuackRecord = Omit<Quack, 'canDelete'>;
 
+export type QuackThread<T extends QuackRecord = Quack> = {
+  quack: T;
+  replies: T[];
+};
+
 export type QuackFilter = {
   search?: string;
   authorId?: string;
 };
+
+export const isDeleted = (quack: Pick<QuackRecord, 'deletedAt'>): boolean =>
+  quack.deletedAt !== null;
+
+export const isWorthShowing = (
+  quack: Pick<QuackRecord, 'deletedAt' | 'replyCount'>,
+): boolean => !isDeleted(quack) || quack.replyCount > 0;
 
 export const isQuackAuthor = (
   viewer: Pick<Identity, 'id'>,

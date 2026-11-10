@@ -1,11 +1,14 @@
 import { NewPoll } from '@/modules/quack/domain/poll';
 import {
   canDeleteQuack,
+  isDeleted,
   isQuackAuthor,
+  isWorthShowing,
   Mood,
   Quack,
   QuackRecord,
   QuackScope,
+  QuackThread,
 } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
@@ -27,7 +30,7 @@ const withPermissionsFor =
   (viewer: Identity) =>
   (quack: QuackRecord): Quack => ({
     ...quack,
-    canDelete: canDeleteQuack(viewer, quack.userId),
+    canDelete: !isDeleted(quack) && canDeleteQuack(viewer, quack.userId),
   });
 
 const normalizeSearch = (search?: string): string =>
@@ -62,14 +65,40 @@ export class QuacksService {
     return quacks.map(withPermissionsFor(viewer));
   }
 
+  async getQuackThread(
+    viewer: Identity,
+    quackId: string,
+  ): Promise<QuackThread> {
+    const thread = await this.quackRepository.getQuackThread(
+      viewer.id,
+      quackId,
+    );
+    if (!thread || !isWorthShowing(thread.quack)) {
+      throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
+    }
+    return {
+      quack: withPermissionsFor(viewer)(thread.quack),
+      replies: thread.replies.map(withPermissionsFor(viewer)),
+    };
+  }
+
   async createQuack(
     user: Identity,
-    quackData: { text?: string; mood?: Mood | null; poll?: NewPoll | null },
+    quackData: {
+      text?: string;
+      mood?: Mood | null;
+      poll?: NewPoll | null;
+      parentId?: string | null;
+    },
   ): Promise<Quack> {
     const text = quackData.text ?? '';
     const poll = quackData.poll ?? null;
+    const parentId = quackData.parentId ?? null;
     if (!text.trim() && !poll) {
       throw new BadRequestException(TEXT_OR_POLL_REQUIRED_MESSAGE);
+    }
+    if (parentId && !(await this.quackRepository.isNotDeleted(parentId))) {
+      throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
     }
 
     const quack = await this.quackRepository.createQuack({
@@ -78,6 +107,7 @@ export class QuacksService {
       // the author is taken from the session, never from the request body
       userId: user.id,
       poll,
+      parentId,
     });
 
     if (quack.poll) {

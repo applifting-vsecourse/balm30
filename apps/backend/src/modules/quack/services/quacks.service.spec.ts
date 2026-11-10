@@ -25,8 +25,11 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   userId: 'u1',
   createdAt: new Date('2026-01-01T12:00:00Z'),
   updatedAt: new Date('2026-01-01T12:00:00Z'),
+  deletedAt: null,
   user: { id: 'u1', name: 'Caffeinated Duck', username: 'CaffeinatedDuck' },
   poll: null,
+  replyingTo: null,
+  replyCount: 0,
   canDelete: true,
   ...overrides,
 });
@@ -144,6 +147,7 @@ describe('QuacksService', () => {
       mood: null,
       userId: 'u1',
       poll: null,
+      parentId: null,
     });
   });
 
@@ -163,6 +167,7 @@ describe('QuacksService', () => {
       mood: 'silly',
       userId: 'u1',
       poll: null,
+      parentId: null,
     });
   });
 
@@ -200,6 +205,7 @@ describe('QuacksService', () => {
         mood: null,
         userId: 'u1',
         poll: newPoll,
+        parentId: null,
       });
     });
 
@@ -348,5 +354,117 @@ describe('QuacksService', () => {
         expect(repository.deleteQuack).not.toHaveBeenCalled();
       },
     );
+  });
+
+  describe('replying', () => {
+    it('creates a reply to a quack that is not deleted', async () => {
+      const repository = mock<QuackRepository>();
+      repository.isNotDeleted.mockResolvedValue(true);
+      repository.createQuack.mockResolvedValue(aQuack({ id: 'r1' }));
+
+      await new QuacksService(repository).createQuack(viewer, {
+        text: 'me too',
+        parentId: 'q1',
+      });
+
+      expect(repository.isNotDeleted).toHaveBeenCalledWith('q1');
+      expect(repository.createQuack).toHaveBeenCalledWith(
+        expect.objectContaining({ parentId: 'q1', userId: 'u1' }),
+      );
+    });
+
+    it('refuses a reply to a quack that is deleted or does not exist', async () => {
+      const repository = mock<QuackRepository>();
+      repository.isNotDeleted.mockResolvedValue(false);
+
+      await expect(
+        new QuacksService(repository).createQuack(viewer, {
+          text: 'me too',
+          parentId: 'q9',
+        }),
+      ).rejects.toEqual(new NotFoundException(QUACK_NOT_FOUND_MESSAGE));
+      expect(repository.createQuack).not.toHaveBeenCalled();
+    });
+
+    it('does not look up a parent for a top-level quack', async () => {
+      const repository = mock<QuackRepository>();
+      repository.createQuack.mockResolvedValue(aQuack());
+
+      await new QuacksService(repository).createQuack(viewer, {
+        text: 'hello',
+      });
+
+      expect(repository.isNotDeleted).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('a thread', () => {
+    const deleted = new Date('2026-01-02T12:00:00Z');
+
+    it('returns the quack with its replies and permissions', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackThread.mockResolvedValue({
+        quack: aQuack({ replyCount: 1 }),
+        replies: [aQuack({ id: 'r1', userId: 'u2' })],
+      });
+
+      const thread = await new QuacksService(repository).getQuackThread(
+        viewer,
+        'q1',
+      );
+
+      expect(repository.getQuackThread).toHaveBeenCalledWith('u1', 'q1');
+      expect(thread.quack.canDelete).toBe(true);
+      expect(thread.replies.map((reply) => reply.canDelete)).toEqual([false]);
+    });
+
+    it('shows a deleted quack that still has replies', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackThread.mockResolvedValue({
+        quack: aQuack({ deletedAt: deleted, text: '', replyCount: 1 }),
+        replies: [aQuack({ id: 'r1' })],
+      });
+
+      const thread = await new QuacksService(repository).getQuackThread(
+        viewer,
+        'q1',
+      );
+
+      expect(thread.quack.canDelete).toBe(false);
+      expect(thread.replies).toHaveLength(1);
+    });
+
+    it.each([
+      ['does not exist', null],
+      [
+        'is deleted and has no replies',
+        {
+          quack: aQuack({ deletedAt: deleted, text: '', replyCount: 0 }),
+          replies: [],
+        },
+      ],
+    ])('says the quack does not exist when it %s', async (_case, thread) => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackThread.mockResolvedValue(thread);
+
+      await expect(
+        new QuacksService(repository).getQuackThread(viewer, 'q1'),
+      ).rejects.toEqual(new NotFoundException(QUACK_NOT_FOUND_MESSAGE));
+    });
+
+    it('lets nobody delete a deleted reply, not even an admin', async () => {
+      const repository = mock<QuackRepository>();
+      repository.getQuackThread.mockResolvedValue({
+        quack: aQuack({ replyCount: 1 }),
+        replies: [aQuack({ id: 'r1', deletedAt: deleted, replyCount: 1 })],
+      });
+
+      const thread = await new QuacksService(repository).getQuackThread(
+        admin,
+        'q1',
+      );
+
+      expect(thread.replies[0].canDelete).toBe(false);
+    });
   });
 });

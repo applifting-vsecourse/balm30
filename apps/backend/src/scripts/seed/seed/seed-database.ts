@@ -173,6 +173,49 @@ Please stop tagging me.`,
     });
   }
 
+  console.log('Creating example replies');
+
+  const timeAgo = (minutes: number): Date =>
+    new Date(now - minutes * MINUTE_IN_MS);
+
+  const crumbReport = await createQuack(prisma, {
+    text: `Field report: one (1) crumb deployed near the bench.
+Requesting a professional opinion.`,
+    userId: caffeinatedDuck.id,
+    createdAt: timeAgo(150),
+  });
+  const crumbReview = await createQuack(prisma, {
+    text: `Unseasoned. Thrown without conviction. 3/10.`,
+    userId: breadCritic.id,
+    createdAt: timeAgo(140),
+    parentId: crumbReport.id,
+  });
+  await createQuack(prisma, {
+    text: `it was a test crumb. the real crumb is coming`,
+    userId: caffeinatedDuck.id,
+    createdAt: timeAgo(130),
+    parentId: crumbReview.id,
+  });
+  await createQuack(prisma, {
+    text: `Please don't feed the critic.`,
+    userId: pondAdmin.id,
+    createdAt: timeAgo(125),
+    parentId: crumbReport.id,
+  });
+
+  const deletedThought = await createQuack(prisma, {
+    text: '',
+    userId: deepDuckThoughts.id,
+    createdAt: timeAgo(200),
+    deletedAt: timeAgo(110),
+  });
+  await createQuack(prisma, {
+    text: `Whatever that was, I've been thinking about it all afternoon.`,
+    userId: migrationSeason.id,
+    createdAt: timeAgo(190),
+    parentId: deletedThought.id,
+  });
+
   console.log('Creating example poll');
 
   await createPoll(prisma, {
