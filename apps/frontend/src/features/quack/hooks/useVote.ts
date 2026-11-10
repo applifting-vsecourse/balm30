@@ -2,8 +2,8 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { castVote, removeVote } from "@/features/quack/api/pollVote"
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import type { Quack } from "@/features/quack/api/quackSchemas"
-import { pollMutationScope, updatePollInLists } from "@/features/quack/lib/pollMutations"
+import type { Quack, QuackThread } from "@/features/quack/api/quackSchemas"
+import { pollMutationScope, updatePollInQuacks } from "@/features/quack/lib/pollMutations"
 import { withVote } from "@/features/quack/lib/withVote"
 
 export function useVote(pollId: string) {
@@ -17,26 +17,26 @@ export function useVote(pollId: string) {
     mutationFn: (optionId: string | null) =>
       optionId ? castVote(pollId, optionId) : removeVote(pollId),
     onMutate: async (optionId) => {
-      await queryClient.cancelQueries({ queryKey: quackKeys.lists() })
-      const snapshot = queryClient.getQueriesData<Quack[]>({ queryKey: quackKeys.lists() })
-      updatePollInLists(queryClient, pollId, (poll) => withVote(poll, optionId))
+      await queryClient.cancelQueries({ queryKey: quackKeys.all() })
+      const snapshot = queryClient.getQueriesData<Quack[] | QuackThread>({
+        queryKey: quackKeys.all(),
+      })
+      updatePollInQuacks(queryClient, pollId, (poll) => withVote(poll, optionId))
       return { snapshot }
     },
     onSuccess: (poll) => {
       if (isLatestVote()) {
-        updatePollInLists(queryClient, pollId, () => poll)
+        updatePollInQuacks(queryClient, pollId, () => poll)
       }
     },
     onError: (_error, _optionId, context) => {
       if (isLatestVote()) {
-        context?.snapshot.forEach(([queryKey, quacks]) =>
-          queryClient.setQueryData(queryKey, quacks),
-        )
+        context?.snapshot.forEach(([queryKey, data]) => queryClient.setQueryData(queryKey, data))
       }
     },
     onSettled: async () => {
       if (isLatestVote()) {
-        await queryClient.invalidateQueries({ queryKey: quackKeys.lists() })
+        await queryClient.invalidateQueries({ queryKey: quackKeys.all() })
       }
     },
   })

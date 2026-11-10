@@ -21,9 +21,15 @@ type DeleteQuackButtonProps = {
   quackId: string
   authorUsername: string
   isOwnQuack: boolean
+  replyCount: number
 }
 
-export function DeleteQuackButton({ quackId, authorUsername, isOwnQuack }: DeleteQuackButtonProps) {
+export function DeleteQuackButton({
+  quackId,
+  authorUsername,
+  isOwnQuack,
+  replyCount,
+}: DeleteQuackButtonProps) {
   const [isOpen, setIsOpen] = useState(false)
   const remove = useDeleteQuack(quackId)
 
@@ -54,8 +60,9 @@ export function DeleteQuackButton({ quackId, authorUsername, isOwnQuack }: Delet
           </AlertDialogTitle>
           <AlertDialogDescription>
             {isOwnQuack ? null : "You're deleting it as a moderator. "}
-            It disappears from the feed for everyone, together with its poll and votes. This
-            can&apos;t be undone.
+            It disappears for everyone, together with its poll and votes.{" "}
+            {replyCount > 0 ? "Its replies stay, under a note that the quack was deleted. " : null}
+            This can&apos;t be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 

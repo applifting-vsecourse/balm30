@@ -14,7 +14,7 @@ export function useDeleteQuack(quackId: string) {
       queryClient.setQueriesData<Quack[]>({ queryKey: quackKeys.lists() }, (quacks) =>
         quacks?.filter((quack) => quack.id !== quackId),
       )
-      await queryClient.invalidateQueries({ queryKey: quackKeys.lists() })
+      await queryClient.invalidateQueries({ queryKey: quackKeys.all() })
     },
   })
 }

@@ -15,6 +15,8 @@ type QuackListProps = {
   scope?: QuackScope
   onWriteFirst?: () => void
   viewerId?: string
+  emptyText?: string
+  shouldShowReplyingTo?: boolean
 }
 
 export function QuackList({
@@ -26,6 +28,8 @@ export function QuackList({
   scope = "all",
   onWriteFirst,
   viewerId,
+  emptyText,
+  shouldShowReplyingTo,
 }: QuackListProps) {
   return (
     <div className="flex flex-col">
@@ -59,6 +63,7 @@ export function QuackList({
 
       {!isLoading && !error && quacks.length === 0 ? (
         <EmptyState
+          emptyText={emptyText}
           search={search}
           scope={scope}
           onWriteFirst={onWriteFirst}
@@ -70,15 +75,20 @@ export function QuackList({
           key={quack.id}
           quack={quack}
           viewerId={viewerId}
+          shouldShowReplyingTo={shouldShowReplyingTo}
         />
       ))}
     </div>
   )
 }
 
-type EmptyStateProps = Pick<QuackListProps, "search" | "scope" | "onWriteFirst">
+type EmptyStateProps = Pick<QuackListProps, "emptyText" | "search" | "scope" | "onWriteFirst">
 
-function EmptyState({ search, scope, onWriteFirst }: EmptyStateProps) {
+function EmptyState({ emptyText, search, scope, onWriteFirst }: EmptyStateProps) {
+  if (emptyText) {
+    return <p className="py-8 text-center text-sm text-muted-foreground">{emptyText}</p>
+  }
+
   if (scope === "mine" && !search) {
     return (
       <div className="flex flex-col items-center gap-3 py-8">
