@@ -71,6 +71,7 @@ describe("QuackForm", () => {
       text: "",
       mood: null,
       poll: { question: "Where do we go for lunch?", options: ["Pizza", "Soup"] },
+      parentId: null,
     })
   })
 
@@ -83,7 +84,7 @@ describe("QuackForm", () => {
     await submit()
 
     await waitFor(() => expect(addQuack).toHaveBeenCalledOnce())
-    expect(sentQuack()).toEqual({ text: "just a quack", mood: null, poll: null })
+    expect(sentQuack()).toEqual({ text: "just a quack", mood: null, poll: null, parentId: null })
   })
 
   it("starts with two answers and allows two to four", async () => {
@@ -142,5 +143,19 @@ describe("QuackForm", () => {
     expect(await screen.findByText("Keep it under 140 characters")).toBeInTheDocument()
     expect(screen.getByText("Keep it under 50 characters")).toBeInTheDocument()
     expect(addQuack).not.toHaveBeenCalled()
+  })
+
+  it("posts a reply to the quack it belongs to", async () => {
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <QuackForm parentId="q1" />
+      </QueryClientProvider>,
+    )
+
+    await fill("Your reply", "me too")
+    await userEvent.click(screen.getByRole("button", { name: "Reply" }))
+
+    await waitFor(() => expect(addQuack).toHaveBeenCalledOnce())
+    expect(sentQuack()).toEqual({ text: "me too", mood: null, poll: null, parentId: "q1" })
   })
 })

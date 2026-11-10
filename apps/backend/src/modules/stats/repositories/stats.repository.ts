@@ -10,11 +10,11 @@ export class StatsRepository {
     const [users, quacks, polls, votes, recentQuacks] =
       await this.prisma.$transaction([
         this.prisma.user.count(),
-        this.prisma.quack.count(),
+        this.prisma.quack.count({ where: { deletedAt: null } }),
         this.prisma.poll.count(),
         this.prisma.pollVote.count(),
         this.prisma.quack.count({
-          where: { createdAt: { gte: recentSince } },
+          where: { deletedAt: null, createdAt: { gte: recentSince } },
         }),
       ]);
     return { users, quacks, polls, votes, recentQuacks };

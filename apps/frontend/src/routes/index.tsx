@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 
 import { HeaderMenu } from "@/features/auth/components/HeaderMenu"
 import { useSession } from "@/features/auth/hooks/useSession"
-import type { Quack } from "@/features/quack/api/quackSchemas"
+import type { LiveQuack } from "@/features/quack/api/quackSchemas"
 import { QuackItem } from "@/features/quack/components/QuackItem"
 
 export const Route = createFileRoute("/")({
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/")({
 
 // Static sample for the preview below. It renders through the same <Quack />
 // component as the real feed, so the landing page can never drift from it.
-const SAMPLE_QUACKS: Quack[] = [
+const SAMPLE_QUACKS: LiveQuack[] = [
   {
     id: "sample-1",
     text: "me: throws one crumb into the pond\nducks: assemble like the Avengers\ni fear i may have started something",
@@ -25,6 +25,9 @@ const SAMPLE_QUACKS: Quack[] = [
     createdAt: new Date("2026-09-22T09:12:00"),
     user: { id: "sample-user-1", name: "Caffeinated Duck", username: "CaffeinatedDuck" },
     poll: null,
+    isDeleted: false,
+    replyingTo: null,
+    replyCount: 0,
     canDelete: false,
   },
   {
@@ -35,6 +38,9 @@ const SAMPLE_QUACKS: Quack[] = [
     createdAt: new Date("2026-09-22T08:40:00"),
     user: { id: "sample-user-2", name: "Deep Duck Thoughts", username: "DeepDuckThoughts" },
     poll: null,
+    isDeleted: false,
+    replyingTo: null,
+    replyCount: 0,
     canDelete: false,
   },
 ]
@@ -102,6 +108,7 @@ function LandingPage() {
               <QuackItem
                 key={quack.id}
                 quack={quack}
+                shouldShowRepliesLink={false}
               />
             ))}
           </div>

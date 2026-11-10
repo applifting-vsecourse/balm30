@@ -35,19 +35,57 @@ export const pollSchema = z.object({
   canClose: z.boolean(),
 })
 
-export const quackSchema = z.object({
+const replyingToSchema = z.object({
+  quackId: z.string(),
+  username: z.string().nullable(),
+})
+
+const threadFields = {
   id: z.string(),
+  createdAt: z.coerce.date(),
+  replyingTo: replyingToSchema.nullable(),
+  replyCount: z.number().int().nonnegative(),
+}
+
+export const liveQuackSchema = z.object({
+  ...threadFields,
+  isDeleted: z.literal(false),
   text: z.string(),
   mood: moodSchema.nullable(),
   userId: z.string(),
-  createdAt: z.coerce.date(),
   user: quackUserSchema,
   poll: pollSchema.nullable(),
   canDelete: z.boolean(),
 })
 
+export const deletedQuackSchema = z.object({
+  ...threadFields,
+  isDeleted: z.literal(true),
+  text: z.literal(""),
+  mood: z.null(),
+  userId: z.null(),
+  user: z.null(),
+  poll: z.null(),
+  canDelete: z.literal(false),
+})
+
+export const quackSchema = z.discriminatedUnion("isDeleted", [liveQuackSchema, deletedQuackSchema])
+
 export const quacksSchema = z.array(quackSchema)
+
+export const quackThreadSchema = z.object({
+  quack: quackSchema,
+  replies: quacksSchema,
+})
 
 export type Poll = z.infer<typeof pollSchema>
 
+export type ReplyingTo = z.infer<typeof replyingToSchema>
+
+export type LiveQuack = z.infer<typeof liveQuackSchema>
+
+export type DeletedQuack = z.infer<typeof deletedQuackSchema>
+
 export type Quack = z.infer<typeof quackSchema>
+
+export type QuackThread = z.infer<typeof quackThreadSchema>

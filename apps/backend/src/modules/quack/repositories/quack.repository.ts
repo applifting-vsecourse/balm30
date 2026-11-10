@@ -1,29 +1,46 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
-import {
-  Prisma,
-  Quack as PrismaQuack,
-  User as PrismaUser,
-} from '@/generated/prisma/client';
+import { Prisma } from '@/generated/prisma/client';
 import { NewPoll } from '@/modules/quack/domain/poll';
-import { Mood, QuackFilter, QuackRecord } from '@/modules/quack/domain/quack';
-import { Injectable } from '@nestjs/common';
 import {
-  mapPrismaPollToDomain,
-  pollIncludeFor,
-  PrismaPollWithViewer,
-} from './prisma-poll';
+  Mood,
+  QuackFilter,
+  QuackRecord,
+  QuackThread,
+} from '@/modules/quack/domain/quack';
+import { Injectable } from '@nestjs/common';
+import { mapPrismaPollToDomain, pollIncludeFor } from './prisma-poll';
+
+const NOT_DELETED = { deletedAt: null } satisfies Prisma.QuackWhereInput;
+
+const SHOWN_IN_THREAD = {
+  OR: [NOT_DELETED, { replies: { some: NOT_DELETED } }],
+} satisfies Prisma.QuackWhereInput;
 
 const includeQuackRelationsFor = (viewerId: string) =>
   ({
     user: true,
     poll: { include: pollIncludeFor(viewerId) },
+    parent: {
+      select: {
+        id: true,
+        deletedAt: true,
+        user: { select: { username: true, displayUsername: true } },
+      },
+    },
+    _count: { select: { replies: { where: NOT_DELETED } } },
   }) as const;
 
+type PrismaQuackWithRelations = Prisma.QuackGetPayload<{
+  include: ReturnType<typeof includeQuackRelationsFor>;
+}>;
+
+const usernameOf = (user: {
+  username: string | null;
+  displayUsername: string | null;
+}): string => user.displayUsername ?? user.username ?? '';
+
 const mapPrismaQuackToDomain = (
-  quack: PrismaQuack & {
-    user?: PrismaUser;
-    poll?: PrismaPollWithViewer | null;
-  },
+  quack: PrismaQuackWithRelations,
   viewerId: string,
 ): QuackRecord => ({
   id: quack.id,
@@ -32,14 +49,20 @@ const mapPrismaQuackToDomain = (
   userId: quack.userId,
   createdAt: quack.createdAt,
   updatedAt: quack.updatedAt,
-  user: quack.user
-    ? {
-        id: quack.user.id,
-        name: quack.user.name,
-        username: quack.user.displayUsername ?? quack.user.username ?? '',
-      }
-    : undefined,
+  deletedAt: quack.deletedAt,
+  user: {
+    id: quack.user.id,
+    name: quack.user.name,
+    username: usernameOf(quack.user),
+  },
   poll: quack.poll ? mapPrismaPollToDomain(quack.poll, viewerId) : null,
+  replyingTo: quack.parent
+    ? {
+        quackId: quack.parent.id,
+        username: quack.parent.deletedAt ? null : usernameOf(quack.parent.user),
+      }
+    : null,
+  replyCount: quack._count.replies,
 });
 
 const searchCondition = (search: string): Prisma.QuackWhereInput => ({
@@ -65,6 +88,7 @@ export class QuackRepository {
   ): Promise<QuackRecord[]> {
     const quacks = await this.prisma.quack.findMany({
       where: {
+        ...NOT_DELETED,
         ...(search ? searchCondition(search) : {}),
         ...(authorId ? { userId: authorId } : {}),
       },
@@ -74,18 +98,46 @@ export class QuackRepository {
     return quacks.map((quack) => mapPrismaQuackToDomain(quack, viewerId));
   }
 
+  async getQuackThread(
+    viewerId: string,
+    quackId: string,
+  ): Promise<QuackThread<QuackRecord> | null> {
+    const quack = await this.prisma.quack.findUnique({
+      where: { id: quackId },
+      include: {
+        ...includeQuackRelationsFor(viewerId),
+        replies: {
+          where: SHOWN_IN_THREAD,
+          include: includeQuackRelationsFor(viewerId),
+          orderBy: { createdAt: 'asc' },
+        },
+      },
+    });
+    if (!quack) {
+      return null;
+    }
+    return {
+      quack: mapPrismaQuackToDomain(quack, viewerId),
+      replies: quack.replies.map((reply) =>
+        mapPrismaQuackToDomain(reply, viewerId),
+      ),
+    };
+  }
+
   async createQuack(createQuackData: {
     text: string;
     mood: Mood | null;
     userId: string;
     poll: NewPoll | null;
+    parentId: string | null;
   }): Promise<QuackRecord> {
-    const { poll } = createQuackData;
+    const { poll, parentId } = createQuackData;
     const quack = await this.prisma.quack.create({
       data: {
         text: createQuackData.text,
         mood: createQuackData.mood,
         user: { connect: { id: createQuackData.userId } },
+        parent: parentId ? { connect: { id: parentId } } : undefined,
         poll: poll
           ? {
               create: {
@@ -105,15 +157,28 @@ export class QuackRepository {
     return mapPrismaQuackToDomain(quack, createQuackData.userId);
   }
 
+  async isNotDeleted(quackId: string): Promise<boolean> {
+    const count = await this.prisma.quack.count({
+      where: { id: quackId, ...NOT_DELETED },
+    });
+    return count > 0;
+  }
+
   async getAuthorId(quackId: string): Promise<string | null> {
-    const quack = await this.prisma.quack.findUnique({
-      where: { id: quackId },
+    const quack = await this.prisma.quack.findFirst({
+      where: { id: quackId, ...NOT_DELETED },
       select: { userId: true },
     });
     return quack?.userId ?? null;
   }
 
   async deleteQuack(quackId: string): Promise<void> {
-    await this.prisma.quack.deleteMany({ where: { id: quackId } });
+    await this.prisma.$transaction([
+      this.prisma.poll.deleteMany({ where: { quackId } }),
+      this.prisma.quack.updateMany({
+        where: { id: quackId, ...NOT_DELETED },
+        data: { deletedAt: new Date(), text: '', mood: null },
+      }),
+    ]);
   }
 }

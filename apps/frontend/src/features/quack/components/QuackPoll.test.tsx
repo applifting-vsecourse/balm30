@@ -1,12 +1,14 @@
 import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query"
-import { render, screen, waitFor, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { renderWithRouter } from "@/test/renderWithRouter"
 
 import { closePoll } from "@/features/quack/api/closePoll"
 import { castVote, removeVote } from "@/features/quack/api/pollVote"
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import type { Poll, Quack } from "@/features/quack/api/quackSchemas"
+import type { LiveQuack, Poll, Quack } from "@/features/quack/api/quackSchemas"
 import { QuackList } from "@/features/quack/components/QuackList"
 
 vi.mock("@/features/quack/api/pollVote", () => ({ castVote: vi.fn(), removeVote: vi.fn() }))
@@ -26,7 +28,7 @@ const poll = (overrides: Partial<Poll> = {}): Poll => ({
   ...overrides,
 })
 
-const pollQuack = (overrides: Partial<Poll> = {}): Quack => ({
+const pollQuack = (overrides: Partial<Poll> = {}): LiveQuack => ({
   id: "q1",
   text: "",
   mood: null,
@@ -34,6 +36,9 @@ const pollQuack = (overrides: Partial<Poll> = {}): Quack => ({
   createdAt: new Date("2026-01-01T12:00:00Z"),
   user: { id: "u1", name: "Pond Admin", username: "PondAdmin" },
   poll: poll(overrides),
+  isDeleted: false,
+  replyingTo: null,
+  replyCount: 0,
   canDelete: false,
 })
 
@@ -46,10 +51,10 @@ function Feed() {
   return <QuackList quacks={data ?? []} />
 }
 
-const renderFeed = (overrides: Partial<Poll> = {}) => {
+const renderFeed = async (overrides: Partial<Poll> = {}) => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   queryClient.setQueryData(quackKeys.list(""), [pollQuack(overrides)])
-  render(
+  await renderWithRouter(
     <QueryClientProvider client={queryClient}>
       <Feed />
     </QueryClientProvider>,
@@ -82,8 +87,8 @@ describe("QuackPoll", () => {
     vi.mocked(closePoll).mockReset()
   })
 
-  it("shows every answer's count, percentage and the total, in order", () => {
-    renderFeed()
+  it("shows every answer's count, percentage and the total, in order", async () => {
+    await renderFeed()
 
     expect(screen.getByText("Where do we go for lunch?")).toBeInTheDocument()
     const answers = within(screen.getByRole("list", { name: "Answers" })).getAllByRole("button")
@@ -91,8 +96,8 @@ describe("QuackPoll", () => {
     expect(screen.getByText("3 votes")).toBeInTheDocument()
   })
 
-  it("shows 0% everywhere before anyone votes", () => {
-    renderFeed({
+  it("shows 0% everywhere before anyone votes", async () => {
+    await renderFeed({
       options: [
         { id: "o1", text: "Pizza", votes: 0 },
         { id: "o2", text: "Soup", votes: 0 },
@@ -104,8 +109,8 @@ describe("QuackPoll", () => {
     expect(screen.getByText("0 votes")).toBeInTheDocument()
   })
 
-  it("marks my answer", () => {
-    renderFeed({ myOptionId: "o2" })
+  it("marks my answer", async () => {
+    await renderFeed({ myOptionId: "o2" })
 
     expectAnswer("Soup", "1 · 33%", true)
     expectAnswer("Pizza", "2 · 67%", false)
@@ -114,7 +119,7 @@ describe("QuackPoll", () => {
   it("counts my vote straight away, then shows the server's numbers", async () => {
     const request = deferred<Poll>()
     vi.mocked(castVote).mockReturnValue(request.promise)
-    renderFeed()
+    await renderFeed()
 
     await userEvent.click(answer("Soup"))
 
@@ -139,7 +144,7 @@ describe("QuackPoll", () => {
 
   it("moves my vote to another answer", async () => {
     vi.mocked(castVote).mockReturnValue(neverAnswers())
-    renderFeed({ myOptionId: "o1" })
+    await renderFeed({ myOptionId: "o1" })
 
     await userEvent.click(answer("Soup"))
 
@@ -150,7 +155,7 @@ describe("QuackPoll", () => {
 
   it("removes my vote when I click my own answer again", async () => {
     vi.mocked(removeVote).mockReturnValue(neverAnswers())
-    renderFeed({ myOptionId: "o1" })
+    await renderFeed({ myOptionId: "o1" })
 
     await userEvent.click(answer("Pizza"))
 
@@ -162,7 +167,7 @@ describe("QuackPoll", () => {
 
   it("puts the poll back and says so when a vote fails, and retries it", async () => {
     vi.mocked(castVote).mockRejectedValueOnce(new Error("This poll is closed"))
-    renderFeed()
+    await renderFeed()
 
     await userEvent.click(answer("Soup"))
 
@@ -183,7 +188,7 @@ describe("QuackPoll", () => {
     const first = deferred<Poll>()
     const second = deferred<Poll>()
     vi.mocked(castVote).mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise)
-    renderFeed()
+    await renderFeed()
 
     await userEvent.click(answer("Pizza"))
     await userEvent.click(answer("Soup"))
@@ -220,7 +225,7 @@ describe("QuackPoll", () => {
   it("sends votes for one poll one at a time", async () => {
     const first = deferred<Poll>()
     vi.mocked(castVote).mockReturnValueOnce(first.promise).mockReturnValue(neverAnswers())
-    renderFeed()
+    await renderFeed()
 
     await userEvent.click(answer("Pizza"))
     await userEvent.click(answer("Soup"))
@@ -231,8 +236,8 @@ describe("QuackPoll", () => {
     await waitFor(() => expect(castVote).toHaveBeenCalledTimes(2))
   })
 
-  it("shows a closed poll's final results with my pick, and can't be voted on", () => {
-    renderFeed({ closedAt: new Date("2026-01-02T12:00:00Z"), myOptionId: "o2" })
+  it("shows a closed poll's final results with my pick, and can't be voted on", async () => {
+    await renderFeed({ closedAt: new Date("2026-01-02T12:00:00Z"), myOptionId: "o2" })
 
     expect(screen.getByText("3 votes · Closed")).toBeInTheDocument()
     expect(answer("Pizza")).toBeDisabled()
@@ -246,14 +251,14 @@ describe("QuackPoll", () => {
     const confirm = () =>
       userEvent.click(within(dialog()).getByRole("button", { name: "Close poll" }))
 
-    it("is only offered to whoever may close it", () => {
-      renderFeed({ canClose: false })
+    it("is only offered to whoever may close it", async () => {
+      await renderFeed({ canClose: false })
 
       expect(screen.queryByRole("button", { name: "Close poll" })).not.toBeInTheDocument()
     })
 
     it("asks first and changes nothing when I keep it open", async () => {
-      renderFeed({ canClose: true })
+      await renderFeed({ canClose: true })
 
       await userEvent.click(closeButton())
       expect(within(dialog()).getByText("Close this poll?")).toBeInTheDocument()
@@ -268,7 +273,7 @@ describe("QuackPoll", () => {
       vi.mocked(closePoll).mockResolvedValue(
         poll({ closedAt: new Date("2026-01-02T12:00:00Z"), canClose: false }),
       )
-      renderFeed({ canClose: true })
+      await renderFeed({ canClose: true })
 
       await userEvent.click(closeButton())
       await confirm()
@@ -282,7 +287,7 @@ describe("QuackPoll", () => {
 
     it("keeps the dialog open with the reason when closing fails", async () => {
       vi.mocked(closePoll).mockRejectedValue(new Error("Only the author can close this poll"))
-      renderFeed({ canClose: true })
+      await renderFeed({ canClose: true })
 
       await userEvent.click(closeButton())
       await confirm()
@@ -298,7 +303,7 @@ describe("QuackPoll", () => {
       const vote = deferred<Poll>()
       vi.mocked(castVote).mockReturnValue(vote.promise)
       vi.mocked(closePoll).mockReturnValue(neverAnswers())
-      renderFeed({ canClose: true })
+      await renderFeed({ canClose: true })
 
       await userEvent.click(answer("Soup"))
       await userEvent.click(closeButton())

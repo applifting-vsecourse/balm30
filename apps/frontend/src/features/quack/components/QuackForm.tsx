@@ -94,12 +94,13 @@ const EMPTY_POLL: NonNullable<FormValues["poll"]> = {
 export type QuackFormHandle = { focusText: () => void }
 
 type QuackFormProps = {
+  parentId?: string
   defaultMood?: Mood | null
   className?: string
   ref?: Ref<QuackFormHandle>
 }
 
-export function QuackForm({ defaultMood, className, ref }: QuackFormProps) {
+export function QuackForm({ parentId, defaultMood, className, ref }: QuackFormProps) {
   const addQuack = useAddQuack()
   const emptyValues: FormValues = { text: "", mood: defaultMood ?? NO_MOOD, poll: null }
   const form = useForm<FormValues>({
@@ -124,6 +125,7 @@ export function QuackForm({ defaultMood, className, ref }: QuackFormProps) {
               options: values.poll.options.map((option) => option.text),
             }
           : null,
+        parentId: parentId ?? null,
       },
       { onSuccess: () => form.reset(emptyValues) },
     )
@@ -147,11 +149,11 @@ export function QuackForm({ defaultMood, className, ref }: QuackFormProps) {
           name="text"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>New quack</FormLabel>
+              <FormLabel>{parentId ? "Your reply" : "New quack"}</FormLabel>
               <FormControl>
                 <Textarea
                   rows={3}
-                  placeholder="Quack something..."
+                  placeholder={parentId ? "Quack back..." : "Quack something..."}
                   disabled={addQuack.isPending}
                   {...field}
                 />
@@ -236,7 +238,7 @@ export function QuackForm({ defaultMood, className, ref }: QuackFormProps) {
               disabled={addQuack.isPending}
             >
               {addQuack.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              Quack
+              {parentId ? "Reply" : "Quack"}
             </Button>
           </div>
         </div>

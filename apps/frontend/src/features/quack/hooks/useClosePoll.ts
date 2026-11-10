@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 
 import { closePoll } from "@/features/quack/api/closePoll"
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import { pollMutationScope, updatePollInLists } from "@/features/quack/lib/pollMutations"
+import { pollMutationScope, updatePollInQuacks } from "@/features/quack/lib/pollMutations"
 
 export function useClosePoll(pollId: string) {
   const queryClient = useQueryClient()
@@ -12,8 +12,8 @@ export function useClosePoll(pollId: string) {
     scope: pollMutationScope(pollId),
     mutationFn: () => closePoll(pollId),
     onSuccess: async (poll) => {
-      updatePollInLists(queryClient, pollId, () => poll)
-      await queryClient.invalidateQueries({ queryKey: quackKeys.lists() })
+      updatePollInQuacks(queryClient, pollId, () => poll)
+      await queryClient.invalidateQueries({ queryKey: quackKeys.all() })
     },
   })
 }
