@@ -48,6 +48,7 @@ export class QuacksService {
     {
       search,
       scope = 'all',
+      sort,
     }: { search?: string; scope?: QuackScope; sort?: QuackSort } = {},
   ): Promise<Quack[]> {
     const authorId = scope === 'mine' ? viewer.id : undefined;
@@ -55,6 +56,7 @@ export class QuacksService {
     if (!term) {
       const quacks = await this.quackRepository.getQuacks(viewer.id, {
         authorId,
+        sort,
       });
       return quacks.map(withPermissionsFor(viewer));
     }
@@ -62,6 +64,7 @@ export class QuacksService {
     const quacks = await this.quackRepository.getQuacks(viewer.id, {
       search: term,
       authorId,
+      sort,
     });
     this.logger.log(
       `Quack search q=${JSON.stringify(term)} results=${quacks.length}`,

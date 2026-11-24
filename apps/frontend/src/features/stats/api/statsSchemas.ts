@@ -8,6 +8,8 @@ export const statsSchema = z.object({
   polls: countSchema,
   votes: countSchema,
   recentQuacks: countSchema,
+  likes: countSchema,
+  recentLikes: countSchema,
   recentDays: z.number().int().positive(),
 })
 

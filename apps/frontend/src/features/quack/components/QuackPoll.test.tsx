@@ -39,6 +39,8 @@ const pollQuack = (overrides: Partial<Poll> = {}): LiveQuack => ({
   isDeleted: false,
   replyingTo: null,
   replyCount: 0,
+  likeCount: 0,
+  likedByMe: false,
   canDelete: false,
 })
 

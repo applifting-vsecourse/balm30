@@ -45,7 +45,8 @@ export class QuacksController {
 
   @Get()
   @ApiOperation({
-    summary: 'List quacks, optionally filtered by a search or to your own',
+    summary:
+      'List quacks, optionally filtered by a search or to your own, newest or most liked first',
   })
   @ApiResponse({ status: 200, type: [QuackResponseDto] })
   @ApiResponse({ status: 400, description: 'Invalid search' })
@@ -57,6 +58,7 @@ export class QuacksController {
     const quacks = await this.quacksService.getQuacks(user, {
       search: query.q,
       scope: query.scope,
+      sort: query.sort,
     });
     return quacks.map(QuackResponseDto.fromDomain);
   }

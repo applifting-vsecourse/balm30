@@ -30,6 +30,8 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   poll: null,
   replyingTo: null,
   replyCount: 0,
+  likeCount: 0,
+  likedByMe: false,
   canDelete: true,
   ...overrides,
 });

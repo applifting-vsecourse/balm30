@@ -38,6 +38,8 @@ export type Quack = {
   poll: Poll | null;
   replyingTo: ReplyingTo | null;
   replyCount: number;
+  likeCount: number;
+  likedByMe: boolean;
   canDelete: boolean;
 };
 

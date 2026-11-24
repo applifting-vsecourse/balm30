@@ -1,9 +1,13 @@
-import type { LikeState } from "@/features/quack/api/quackSchemas"
+import { api } from "@/lib/api-client"
 
-export function likeQuack(_quackId: string): Promise<LikeState> {
-  return Promise.reject(new Error("not implemented"))
+import { likeStateSchema, type LikeState } from "@/features/quack/api/quackSchemas"
+
+export async function likeQuack(quackId: string): Promise<LikeState> {
+  const json = await api.post(`quacks/${quackId}/like`).json()
+  return likeStateSchema.parse(json)
 }
 
-export function unlikeQuack(_quackId: string): Promise<LikeState> {
-  return Promise.reject(new Error("not implemented"))
+export async function unlikeQuack(quackId: string): Promise<LikeState> {
+  const json = await api.delete(`quacks/${quackId}/like`).json()
+  return likeStateSchema.parse(json)
 }

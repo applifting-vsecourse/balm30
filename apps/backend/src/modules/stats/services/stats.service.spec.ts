@@ -9,6 +9,8 @@ const stats: Stats = {
   polls: 3,
   votes: 9,
   recentQuacks: 4,
+  likes: 7,
+  recentLikes: 2,
 };
 
 describe('StatsService', () => {

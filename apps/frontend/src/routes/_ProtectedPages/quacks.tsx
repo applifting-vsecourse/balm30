@@ -8,15 +8,22 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 import { useSession } from "@/features/auth/hooks/useSession"
 import { profileQueryOptions } from "@/features/profile/api/profileQueryOptions"
-import { QUACK_SCOPES, type QuackScope } from "@/features/quack/api/quackSchemas"
+import {
+  QUACK_SCOPES,
+  QUACK_SORTS,
+  type QuackScope,
+  type QuackSort as QuackSortValue,
+} from "@/features/quack/api/quackSchemas"
 import { quacksQueryOptions } from "@/features/quack/api/quacksQueryOptions"
 import { QuackForm, type QuackFormHandle } from "@/features/quack/components/QuackForm"
 import { QuackList } from "@/features/quack/components/QuackList"
 import { QuackSearch } from "@/features/quack/components/QuackSearch"
+import { QuackSort } from "@/features/quack/components/QuackSort"
 
 const quacksSearchParamsSchema = z.object({
   q: z.string().optional().catch(undefined),
   scope: z.enum(QUACK_SCOPES).optional().catch(undefined),
+  sort: z.enum(QUACK_SORTS).optional().catch(undefined),
 })
 
 const isQuackScope = (value: string): value is QuackScope =>
@@ -29,10 +36,10 @@ export const Route = createFileRoute("/_ProtectedPages/quacks")({
 })
 
 function QuacksPage() {
-  const { q = "", scope = "all" } = Route.useSearch()
+  const { q = "", scope = "all", sort = "newest" } = Route.useSearch()
   const search = q.trim()
   const navigate = useNavigate({ from: Route.fullPath })
-  const quacksQuery = useQuery(quacksQueryOptions(search, scope))
+  const quacksQuery = useQuery(quacksQueryOptions(search, scope, sort))
   const profileQuery = useQuery(profileQueryOptions())
   const { user } = useSession()
   const formRef = useRef<QuackFormHandle>(null)
@@ -46,6 +53,12 @@ function QuacksPage() {
     },
     [navigate],
   )
+
+  const handleSortChange = (next: QuackSortValue) => {
+    void navigate({
+      search: (previous) => ({ ...previous, sort: next === "newest" ? undefined : next }),
+    })
+  }
 
   const handleScopeChange = (next: string) => {
     if (!isQuackScope(next)) return
@@ -81,6 +94,12 @@ function QuacksPage() {
               className="mb-4"
               value={search}
               onSearchChange={handleSearchChange}
+            />
+
+            <QuackSort
+              className="mb-4"
+              value={sort}
+              onSortChange={handleSortChange}
             />
 
             <QuackList

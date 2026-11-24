@@ -1,4 +1,9 @@
-import { QUACK_SCOPES, QuackScope } from '@/modules/quack/domain/quack';
+import {
+  QUACK_SCOPES,
+  QUACK_SORTS,
+  QuackScope,
+  QuackSort,
+} from '@/modules/quack/domain/quack';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, MaxLength } from 'class-validator';
 
@@ -23,4 +28,14 @@ export class SearchQuacksQueryDto {
   @IsOptional()
   @IsIn(QUACK_SCOPES)
   scope?: QuackScope;
+
+  @ApiPropertyOptional({
+    description:
+      'Order: newest first, or most liked first with ties newest first.',
+    enum: QUACK_SORTS,
+    default: 'newest',
+  })
+  @IsOptional()
+  @IsIn(QUACK_SORTS)
+  sort?: QuackSort;
 }

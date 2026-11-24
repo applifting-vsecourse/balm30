@@ -25,10 +25,10 @@ const keepPreviousDataWithinScope =
 export const quacksQueryOptions = (
   search = "",
   scope: QuackScope = "all",
-  _sort: QuackSort = "newest",
+  sort: QuackSort = "newest",
 ) =>
   queryOptions({
-    queryKey: quackKeys.list(search, scope),
+    queryKey: quackKeys.list(search, scope, sort),
     queryFn: async () =>
       quacksSchema.parse(
         await api
@@ -36,6 +36,7 @@ export const quacksQueryOptions = (
             searchParams: {
               ...(search ? { q: search } : {}),
               ...(scope === "mine" ? { scope } : {}),
+              ...(sort === "likes" ? { sort } : {}),
             },
           })
           .json(),

@@ -5,6 +5,7 @@ import {
   Mood,
   QuackFilter,
   QuackRecord,
+  QuackSort,
   QuackThread,
 } from '@/modules/quack/domain/quack';
 import { Injectable } from '@nestjs/common';
@@ -27,7 +28,8 @@ const includeQuackRelationsFor = (viewerId: string) =>
         user: { select: { username: true, displayUsername: true } },
       },
     },
-    _count: { select: { replies: { where: NOT_DELETED } } },
+    likes: { where: { userId: viewerId }, select: { userId: true } },
+    _count: { select: { replies: { where: NOT_DELETED }, likes: true } },
   }) as const;
 
 type PrismaQuackWithRelations = Prisma.QuackGetPayload<{
@@ -63,7 +65,14 @@ const mapPrismaQuackToDomain = (
       }
     : null,
   replyCount: quack._count.replies,
+  likeCount: quack._count.likes,
+  likedByMe: quack.likes.length > 0,
 });
+
+const ORDER_BY_SORT = {
+  newest: [{ createdAt: 'desc' }],
+  likes: [{ likes: { _count: 'desc' } }, { createdAt: 'desc' }],
+} satisfies Record<QuackSort, Prisma.QuackOrderByWithRelationInput[]>;
 
 const searchCondition = (search: string): Prisma.QuackWhereInput => ({
   OR: [
@@ -84,7 +93,7 @@ export class QuackRepository {
 
   async getQuacks(
     viewerId: string,
-    { search, authorId }: QuackFilter = {},
+    { search, authorId, sort = 'newest' }: QuackFilter = {},
   ): Promise<QuackRecord[]> {
     const quacks = await this.prisma.quack.findMany({
       where: {
@@ -93,7 +102,7 @@ export class QuackRepository {
         ...(authorId ? { userId: authorId } : {}),
       },
       include: includeQuackRelationsFor(viewerId),
-      orderBy: { createdAt: 'desc' },
+      orderBy: ORDER_BY_SORT[sort],
     });
     return quacks.map((quack) => mapPrismaQuackToDomain(quack, viewerId));
   }

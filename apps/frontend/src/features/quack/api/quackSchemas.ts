@@ -66,6 +66,8 @@ export const liveQuackSchema = z.object({
   userId: z.string(),
   user: quackUserSchema,
   poll: pollSchema.nullable(),
+  likeCount: z.number().int().nonnegative(),
+  likedByMe: z.boolean(),
   canDelete: z.boolean(),
 })
 
@@ -77,6 +79,8 @@ export const deletedQuackSchema = z.object({
   userId: z.null(),
   user: z.null(),
   poll: z.null(),
+  likeCount: z.null(),
+  likedByMe: z.null(),
   canDelete: z.literal(false),
 })
 

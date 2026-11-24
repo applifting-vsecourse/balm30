@@ -2,8 +2,8 @@ import { LikeState } from '@/modules/quack/domain/like';
 import { LikeRepository } from '@/modules/quack/repositories/like.repository';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
 import { Identity } from '@/shared/auth/domain/identity';
-import { notImplemented } from '@/shared/not-implemented';
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { QUACK_NOT_FOUND_MESSAGE } from './quacks.service';
 
 @Injectable()
 export class LikesService {
@@ -12,9 +12,21 @@ export class LikesService {
     private readonly likeRepository: LikeRepository,
   ) {}
 
-  likeQuack: (viewer: Identity, quackId: string) => Promise<LikeState> =
-    notImplemented;
+  async likeQuack(viewer: Identity, quackId: string): Promise<LikeState> {
+    await this.ensureLikeable(quackId);
+    await this.likeRepository.like(quackId, viewer.id);
+    return this.likeRepository.getLikeState(quackId, viewer.id);
+  }
 
-  unlikeQuack: (viewer: Identity, quackId: string) => Promise<LikeState> =
-    notImplemented;
+  async unlikeQuack(viewer: Identity, quackId: string): Promise<LikeState> {
+    await this.ensureLikeable(quackId);
+    await this.likeRepository.unlike(quackId, viewer.id);
+    return this.likeRepository.getLikeState(quackId, viewer.id);
+  }
+
+  private async ensureLikeable(quackId: string): Promise<void> {
+    if (!(await this.quackRepository.isNotDeleted(quackId))) {
+      throw new NotFoundException(QUACK_NOT_FOUND_MESSAGE);
+    }
+  }
 }

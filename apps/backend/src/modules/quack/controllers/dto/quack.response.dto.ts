@@ -79,6 +79,21 @@ export class QuackResponseDto {
   replyCount!: number;
 
   @ApiProperty({
+    type: Number,
+    nullable: true,
+    description: 'Likes from everyone; null for a deleted quack',
+  })
+  likeCount!: number | null;
+
+  @ApiProperty({
+    type: Boolean,
+    nullable: true,
+    description:
+      'Whether the signed-in user likes this quack; null for a deleted quack',
+  })
+  likedByMe!: boolean | null;
+
+  @ApiProperty({
     description:
       'Whether the signed-in user can delete this quack: they wrote it, or they are an admin',
   })
@@ -100,6 +115,8 @@ export class QuackResponseDto {
         user: null,
         poll: null,
         isDeleted: true,
+        likeCount: null,
+        likedByMe: null,
         canDelete: false,
       };
     }
@@ -120,6 +137,8 @@ export class QuackResponseDto {
       },
       poll: quack.poll ? PollResponseDto.fromDomain(quack.poll) : null,
       isDeleted: false,
+      likeCount: quack.likeCount,
+      likedByMe: quack.likedByMe,
       canDelete: quack.canDelete,
     };
   }

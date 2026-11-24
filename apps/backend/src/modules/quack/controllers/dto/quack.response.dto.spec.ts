@@ -13,6 +13,8 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   poll: null,
   replyingTo: { quackId: 'q0', username: 'BreadCritic' },
   replyCount: 2,
+  likeCount: 0,
+  likedByMe: false,
   canDelete: true,
   ...overrides,
 });
@@ -47,6 +49,8 @@ describe('QuackResponseDto', () => {
       isDeleted: true,
       replyingTo: { quackId: 'q0', username: 'BreadCritic' },
       replyCount: 2,
+      likeCount: null,
+      likedByMe: null,
       canDelete: false,
     });
   });

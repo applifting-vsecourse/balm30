@@ -53,6 +53,8 @@ export function StatsOverview({ stats, isLoading, error, onReload }: StatsOvervi
     { label: `Quacks in the last ${stats.recentDays} days`, value: stats.recentQuacks },
     { label: "Polls", value: stats.polls },
     { label: "Votes", value: stats.votes },
+    { label: "Likes", value: stats.likes },
+    { label: `Likes in the last ${stats.recentDays} days`, value: stats.recentLikes },
   ]
 
   return (

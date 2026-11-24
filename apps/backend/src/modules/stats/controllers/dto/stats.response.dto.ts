@@ -19,6 +19,14 @@ export class StatsResponseDto {
   })
   recentQuacks!: number;
 
+  @ApiProperty({ description: 'Likes on quacks that are not deleted' })
+  likes!: number;
+
+  @ApiProperty({
+    description: `Likes given in the last ${RECENT_DAYS} days, on quacks that are not deleted`,
+  })
+  recentLikes!: number;
+
   @ApiProperty({
     description: 'How many days "recent" covers',
     example: RECENT_DAYS,

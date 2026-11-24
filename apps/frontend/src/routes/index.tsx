@@ -28,6 +28,8 @@ const SAMPLE_QUACKS: LiveQuack[] = [
     isDeleted: false,
     replyingTo: null,
     replyCount: 0,
+    likeCount: 0,
+    likedByMe: false,
     canDelete: false,
   },
   {
@@ -41,6 +43,8 @@ const SAMPLE_QUACKS: LiveQuack[] = [
     isDeleted: false,
     replyingTo: null,
     replyCount: 0,
+    likeCount: 0,
+    likedByMe: false,
     canDelete: false,
   },
 ]
@@ -109,6 +113,7 @@ function LandingPage() {
                 key={quack.id}
                 quack={quack}
                 shouldShowRepliesLink={false}
+                shouldShowLikeButton={false}
               />
             ))}
           </div>

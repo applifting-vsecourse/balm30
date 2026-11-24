@@ -26,6 +26,8 @@ const liveQuack = (likeCount: number, isLikedByMe: boolean) => {
     isDeleted: false,
     replyingTo: null,
     replyCount: 1,
+    likeCount,
+    likedByMe: isLikedByMe,
     canDelete: false,
   }
   return { ...quack, likeCount, likedByMe: isLikedByMe }
@@ -43,6 +45,8 @@ const deletedQuack = () => {
     isDeleted: true,
     replyingTo: null,
     replyCount: 1,
+    likeCount: null,
+    likedByMe: null,
     canDelete: false,
   }
   return { ...quack, likeCount: null, likedByMe: null }
