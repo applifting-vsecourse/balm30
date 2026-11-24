@@ -2,6 +2,7 @@
 
 Decisions that are hard to undo and affect more of the app than the feature that introduced them. Read the relevant ones before changing the data model or the structure of the app. Add a new one as `NNNN-short-name.md` and list it here.
 
-| #                                         | Title                            | Status   | Summary                                                                                                                                                      |
-| ----------------------------------------- | -------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| [0001](0001-quack-deletion-tombstones.md) | Deleted quacks become tombstones | Accepted | Deleting a quack wipes its content and poll but keeps the row with `deletedAt`, so replies keep their parent and every quack query must filter deleted ones. |
+| #                                         | Title                            | Status   | Summary                                                                                                                                                              |
+| ----------------------------------------- | -------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [0001](0001-quack-deletion-tombstones.md) | Deleted quacks become tombstones | Accepted | Deleting a quack wipes its content and poll but keeps the row with `deletedAt`, so replies keep their parent and every quack query must filter deleted ones.         |
+| [0002](0002-likes.md)                     | Likes are rows, counted on read  | Accepted | One `Like` row per user and quack (composite key), with the count computed on read and never stored. Likes of tombstoned quacks stay but are never shown or counted. |
