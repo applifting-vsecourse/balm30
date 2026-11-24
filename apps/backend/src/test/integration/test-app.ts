@@ -6,6 +6,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import * as request from 'supertest';
 import TestAgent from 'supertest/lib/agent';
+import { truncateAllTables } from './database';
 
 export type SignedInAgent = TestAgent;
 
@@ -23,14 +24,16 @@ export async function createTestApp(): Promise<INestApplication> {
 }
 
 export async function resetDatabase(app: INestApplication): Promise<void> {
-  const prisma = app.get(PrismaService);
-  const tables = await prisma.$queryRaw<{ tablename: string }[]>`
-    SELECT tablename FROM pg_tables
-    WHERE schemaname = 'public' AND tablename <> '_prisma_migrations'`;
-  if (tables.length === 0) return;
-  const tableList = tables.map(({ tablename }) => `"${tablename}"`).join(', ');
-  await prisma.$executeRawUnsafe(`TRUNCATE TABLE ${tableList} CASCADE`);
+  await truncateAllTables(app.get(PrismaService));
 }
+
+export const aUser = (
+  name: string,
+): { name: string; email: string; password: string } => ({
+  name,
+  email: `${name.toLowerCase()}@example.com`,
+  password: 'password1',
+});
 
 export async function signUp(
   app: INestApplication,
@@ -47,4 +50,14 @@ export async function signUp(
     .send(user)
     .expect(200);
   return agent;
+}
+
+export async function makeAdmin(
+  app: INestApplication,
+  email: string,
+): Promise<void> {
+  await app.get(PrismaService).user.update({
+    where: { email },
+    data: { role: 'admin' },
+  });
 }

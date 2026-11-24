@@ -468,3 +468,15 @@ describe('QuacksService', () => {
     });
   });
 });
+
+describe('QuacksService sorting', () => {
+  it('R10: asks the repository for the most liked quacks first', async () => {
+    const repository = mock<QuackRepository>();
+    repository.getQuacks.mockResolvedValue([]);
+
+    const service = new QuacksService(repository);
+    await service.getQuacks(viewer, { sort: 'likes' });
+
+    expect(repository.getQuacks).toHaveBeenCalledWith('u1', { sort: 'likes' });
+  });
+});

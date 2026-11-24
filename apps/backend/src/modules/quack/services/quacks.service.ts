@@ -8,6 +8,7 @@ import {
   Quack,
   QuackRecord,
   QuackScope,
+  QuackSort,
   QuackThread,
 } from '@/modules/quack/domain/quack';
 import { QuackRepository } from '@/modules/quack/repositories/quack.repository';
@@ -44,7 +45,10 @@ export class QuacksService {
 
   async getQuacks(
     viewer: Identity,
-    { search, scope = 'all' }: { search?: string; scope?: QuackScope } = {},
+    {
+      search,
+      scope = 'all',
+    }: { search?: string; scope?: QuackScope; sort?: QuackSort } = {},
   ): Promise<Quack[]> {
     const authorId = scope === 'mine' ? viewer.id : undefined;
     const term = normalizeSearch(search);

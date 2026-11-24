@@ -11,6 +11,10 @@ export const QUACK_SCOPES = ['all', 'mine'] as const;
 
 export type QuackScope = (typeof QUACK_SCOPES)[number];
 
+export const QUACK_SORTS = ['newest', 'likes'] as const;
+
+export type QuackSort = (typeof QUACK_SORTS)[number];
+
 export type QuackAuthor = {
   id: string;
   name: string;
@@ -47,6 +51,7 @@ export type QuackThread<T extends QuackRecord = Quack> = {
 export type QuackFilter = {
   search?: string;
   authorId?: string;
+  sort?: QuackSort;
 };
 
 export const isDeleted = (quack: Pick<QuackRecord, 'deletedAt'>): boolean =>
