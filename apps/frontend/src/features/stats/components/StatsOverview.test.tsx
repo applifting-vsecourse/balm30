@@ -11,6 +11,8 @@ const stats: Stats = {
   polls: 3,
   votes: 9,
   recentQuacks: 4,
+  likes: 12,
+  recentLikes: 5,
   recentDays: 7,
 }
 

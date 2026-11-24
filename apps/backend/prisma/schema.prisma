@@ -38,6 +38,7 @@ model Quack {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId    String
   poll      Poll?
+  likes     Like[]
   parent    Quack?    @relation("QuackReplies", fields: [parentId], references: [id], onDelete: NoAction)
   parentId  String?
   replies   Quack[]   @relation("QuackReplies")
@@ -89,6 +90,18 @@ model PollVote {
   @@id([pollId, userId])
   @@index([optionId])
   @@map("poll_vote")
+}
+
+model Like {
+  quack     Quack    @relation(fields: [quackId], references: [id], onDelete: Cascade)
+  quackId   String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@id([quackId, userId])
+  @@index([userId])
+  @@map("like")
 }
 
 model Session {
@@ -151,6 +164,7 @@ model User {
   accounts      Account[]
   quacks        Quack[]
   pollVotes     PollVote[]
+  likes         Like[]
   role          UserRole   @default(user)
 
   username        String? @db.VarChar(50)

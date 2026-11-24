@@ -6,4 +6,6 @@ export type Stats = {
   polls: number;
   votes: number;
   recentQuacks: number;
+  likes: number;
+  recentLikes: number;
 };

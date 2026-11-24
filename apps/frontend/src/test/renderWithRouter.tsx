@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
   createMemoryHistory,
   createRootRoute,
@@ -13,5 +14,10 @@ export async function renderWithRouter(ui: ReactNode) {
     history: createMemoryHistory(),
   })
   await router.load()
-  return render(<RouterProvider router={router} />)
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>,
+  )
 }

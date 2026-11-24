@@ -13,6 +13,8 @@ const aQuack = (overrides: Partial<Quack> = {}): Quack => ({
   poll: null,
   replyingTo: { quackId: 'q0', username: 'BreadCritic' },
   replyCount: 2,
+  likeCount: 0,
+  likedByMe: false,
   canDelete: true,
   ...overrides,
 });
@@ -47,7 +49,23 @@ describe('QuackResponseDto', () => {
       isDeleted: true,
       replyingTo: { quackId: 'q0', username: 'BreadCritic' },
       replyCount: 2,
+      likeCount: null,
+      likedByMe: null,
       canDelete: false,
     });
+  });
+});
+
+describe('QuackResponseDto likes', () => {
+  it('R9: shows no likes on a deleted quack, even if it had some', () => {
+    const deletedQuackThatHadLikes = {
+      ...aQuack({ deletedAt: new Date('2026-01-02T12:00:00Z') }),
+      likeCount: 3,
+      likedByMe: true,
+    };
+
+    const dto = QuackResponseDto.fromDomain(deletedQuackThatHadLikes);
+
+    expect(dto).toMatchObject({ likeCount: null, likedByMe: null });
   });
 });

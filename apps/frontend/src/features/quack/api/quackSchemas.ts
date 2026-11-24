@@ -19,6 +19,17 @@ export const QUACK_SCOPES = ["all", "mine"] as const
 
 export type QuackScope = (typeof QUACK_SCOPES)[number]
 
+export const QUACK_SORTS = ["newest", "likes"] as const
+
+export type QuackSort = (typeof QUACK_SORTS)[number]
+
+export const likeStateSchema = z.object({
+  likeCount: z.number().int().nonnegative(),
+  likedByMe: z.boolean(),
+})
+
+export type LikeState = z.infer<typeof likeStateSchema>
+
 export const pollOptionSchema = z.object({
   id: z.string(),
   text: z.string(),
@@ -55,6 +66,8 @@ export const liveQuackSchema = z.object({
   userId: z.string(),
   user: quackUserSchema,
   poll: pollSchema.nullable(),
+  likeCount: z.number().int().nonnegative(),
+  likedByMe: z.boolean(),
   canDelete: z.boolean(),
 })
 
@@ -66,6 +79,8 @@ export const deletedQuackSchema = z.object({
   userId: z.null(),
   user: z.null(),
   poll: z.null(),
+  likeCount: z.null(),
+  likedByMe: z.null(),
   canDelete: z.literal(false),
 })
 

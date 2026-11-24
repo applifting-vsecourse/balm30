@@ -3,7 +3,12 @@ import { queryOptions } from "@tanstack/react-query"
 import { api } from "@/lib/api-client"
 
 import { quackKeys } from "@/features/quack/api/quackKeys"
-import { quacksSchema, type Quack, type QuackScope } from "@/features/quack/api/quackSchemas"
+import {
+  quacksSchema,
+  type Quack,
+  type QuackScope,
+  type QuackSort,
+} from "@/features/quack/api/quackSchemas"
 
 const keepPreviousDataWithinScope =
   (scope: QuackScope) =>
@@ -17,9 +22,13 @@ const keepPreviousDataWithinScope =
     return isSameScope ? previous : undefined
   }
 
-export const quacksQueryOptions = (search = "", scope: QuackScope = "all") =>
+export const quacksQueryOptions = (
+  search = "",
+  scope: QuackScope = "all",
+  sort: QuackSort = "newest",
+) =>
   queryOptions({
-    queryKey: quackKeys.list(search, scope),
+    queryKey: quackKeys.list(search, scope, sort),
     queryFn: async () =>
       quacksSchema.parse(
         await api
@@ -27,6 +36,7 @@ export const quacksQueryOptions = (search = "", scope: QuackScope = "all") =>
             searchParams: {
               ...(search ? { q: search } : {}),
               ...(scope === "mine" ? { scope } : {}),
+              ...(sort === "likes" ? { sort } : {}),
             },
           })
           .json(),

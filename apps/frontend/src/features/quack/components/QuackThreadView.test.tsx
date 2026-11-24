@@ -19,6 +19,8 @@ const liveQuack = (overrides: Partial<LiveQuack> = {}): LiveQuack => ({
   isDeleted: false,
   replyingTo: null,
   replyCount: 0,
+  likeCount: 0,
+  likedByMe: false,
   canDelete: false,
   ...overrides,
 })
@@ -34,6 +36,8 @@ const deletedQuack: DeletedQuack = {
   isDeleted: true,
   replyingTo: null,
   replyCount: 1,
+  likeCount: null,
+  likedByMe: null,
   canDelete: false,
 }
 

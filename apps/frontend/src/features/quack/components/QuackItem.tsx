@@ -7,6 +7,7 @@ import { formatDate } from "@/lib/date"
 
 import type { DeletedQuack, LiveQuack, Quack, ReplyingTo } from "@/features/quack/api/quackSchemas"
 import { DeleteQuackButton } from "@/features/quack/components/DeleteQuackButton"
+import { LikeButton } from "@/features/quack/components/LikeButton"
 import { QuackMood } from "@/features/quack/components/QuackMood"
 import { QuackPoll } from "@/features/quack/components/QuackPoll"
 import { UsersName } from "@/features/quack/components/UsersName"
@@ -17,9 +18,19 @@ type ThreadLinkProps = {
   shouldShowReplyingTo?: boolean
 }
 
-type QuackItemProps = ThreadLinkProps & { quack: Quack; viewerId?: string }
+type LiveQuackItemProps = ThreadLinkProps & {
+  quack: LiveQuack
+  viewerId?: string
+  shouldShowLikeButton?: boolean
+}
 
-export function QuackItem({ quack, ...props }: QuackItemProps) {
+type QuackItemProps = ThreadLinkProps & {
+  quack: Quack
+  viewerId?: string
+  shouldShowLikeButton?: boolean
+}
+
+export function QuackItem({ quack, shouldShowLikeButton, ...props }: QuackItemProps) {
   return quack.isDeleted ? (
     <DeletedQuackItem
       quack={quack}
@@ -28,6 +39,7 @@ export function QuackItem({ quack, ...props }: QuackItemProps) {
   ) : (
     <LiveQuackItem
       quack={quack}
+      shouldShowLikeButton={shouldShowLikeButton}
       {...props}
     />
   )
@@ -35,12 +47,15 @@ export function QuackItem({ quack, ...props }: QuackItemProps) {
 
 const ARTICLE_CLASS = "flex w-full gap-4 border-b border-border pt-2 pb-4 last:border-b-0"
 
+const ACTIONS_CLASS = "mt-1 flex items-center gap-4"
+
 function LiveQuackItem({
   quack,
   viewerId,
   shouldShowRepliesLink = true,
   shouldShowReplyingTo = true,
-}: ThreadLinkProps & { quack: LiveQuack; viewerId?: string }) {
+  shouldShowLikeButton = true,
+}: LiveQuackItemProps) {
   const { name, username } = quack.user
 
   const initials = name
@@ -87,12 +102,21 @@ function LiveQuackItem({
           <p className="text-sm break-words whitespace-pre-line">{quack.text}</p>
         ) : null}
         {quack.poll ? <QuackPoll poll={quack.poll} /> : null}
-        {shouldShowRepliesLink ? (
-          <RepliesLink
-            quackId={quack.id}
-            replyCount={quack.replyCount}
-          />
-        ) : null}
+        <div className={ACTIONS_CLASS}>
+          {shouldShowRepliesLink ? (
+            <RepliesLink
+              quackId={quack.id}
+              replyCount={quack.replyCount}
+            />
+          ) : null}
+          {shouldShowLikeButton ? (
+            <LikeButton
+              quackId={quack.id}
+              likeCount={quack.likeCount}
+              isLikedByMe={quack.likedByMe}
+            />
+          ) : null}
+        </div>
       </div>
     </article>
   )
@@ -118,10 +142,12 @@ function DeletedQuackItem({
         ) : null}
         <p className="text-sm text-muted-foreground">This quack was deleted.</p>
         {shouldShowRepliesLink && quack.replyCount > 0 ? (
-          <RepliesLink
-            quackId={quack.id}
-            replyCount={quack.replyCount}
-          />
+          <div className={ACTIONS_CLASS}>
+            <RepliesLink
+              quackId={quack.id}
+              replyCount={quack.replyCount}
+            />
+          </div>
         ) : null}
       </div>
     </article>
@@ -151,7 +177,7 @@ function RepliesLink({ quackId, replyCount }: { quackId: string; replyCount: num
     <Link
       to={ROUTES.quack}
       params={{ quackId }}
-      className="mt-1 inline-flex items-center gap-1 self-start text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+      className="inline-flex items-center gap-1 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
     >
       <MessageCircle
         className="size-4"
